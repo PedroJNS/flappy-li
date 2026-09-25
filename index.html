@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a1624">
+<meta name="description" content="Flappy Li⁺: guía un ion de litio por una batería. Descarga, carga, dendritas, SEI y cuatro químicas de cátodo.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230a1624%22/%3E%3Ccircle cx=%2232%22 cy=%2232%22 r=%2220%22 fill=%22%23ff4da6%22/%3E%3C/svg%3E">
 <title>Flappy Li⁺</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
   color-scheme: dark;
@@ -16,9 +17,14 @@
   --ink: #e8f1f7;
   --dim: #8aa2b8;
   --ion: #ff4da6;
+  --gold: #f2b544;
   --line: #1c2a38;
+  --panel: rgba(9, 20, 33, 0.94);
+  --cyan: #7fe3ff;
+  --u: 1;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; }
 body {
   background: var(--bg);
@@ -26,904 +32,1333 @@ body {
   font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   overscroll-behavior: none;
 }
-.app {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: max(10px, env(safe-area-inset-top)) 16px max(10px, env(safe-area-inset-bottom));
-}
-.bar { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; justify-content: center; }
-.bar h1 { font-family: "Orbitron", "Segoe UI", Arial, sans-serif; font-weight: 900; font-size: 22px; letter-spacing: 0.06em; margin: 0; }
+.app { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 16px; }
+.bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.bar h1 { font-family: "Orbitron", "Segoe UI", Arial, sans-serif; font-weight: 900; font-size: 20px; letter-spacing: 0.06em; margin: 0; }
 .bar .li { color: var(--ion); }
 .bar p { margin: 0; font-size: 12px; color: var(--dim); }
+.bar select { font: inherit; font-size: 12px; background: #0d1a28; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
 .stage { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
-canvas {
-  display: block;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  box-shadow: 0 20px 60px -20px rgba(255, 77, 166, 0.25);
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
+.screen { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 20px 60px -20px rgba(255, 77, 166, 0.25); }
+canvas { display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
 .help { margin: 0; font-size: 12px; color: var(--dim); text-align: center; }
 kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 1px 5px; color: var(--ink); font: inherit; }
+
+.hudbtns { position: absolute; top: calc(var(--u) * 30px); right: calc(var(--u) * 24px); display: flex; gap: calc(var(--u) * 6px); z-index: 3; }
+.hudbtns button { width: calc(var(--u) * 32px); height: calc(var(--u) * 32px); border-radius: 8px; border: 0; background: rgba(255,255,255,0.1); color: var(--ink); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.hudbtns button:hover { background: rgba(255,255,255,0.18); }
+.hudbtns svg { width: 60%; height: 60%; }
+
+.overlay {
+  position: absolute; inset: 0; z-index: 2;
+  font-size: calc(var(--u) * 13px);
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 2.6em 2.2em 1.6em;
+  background: rgba(5, 12, 20, 0.72);
+  display: flex; flex-direction: column; gap: 0.9em;
+  animation: fadein 0.3s ease both;
+}
+.overlay > * { flex-shrink: 0; }
+.overlay.center { justify-content: center; }
+.overlay.late { animation-delay: 0.35s; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .overlay { animation: none; } }
+.overlay h2, .overlay h3 { font-family: "Orbitron", "Segoe UI", Arial, sans-serif; margin: 0; text-wrap: balance; }
+.overlay h2 { font-size: 1.5em; letter-spacing: 0.03em; }
+.overlay h3 { font-size: 0.95em; letter-spacing: 0.05em; color: var(--gold); }
+.overlay p { margin: 0; line-height: 1.5; }
+.muted { color: var(--dim); }
+.logo { font-family: "Orbitron", "Segoe UI", Arial, sans-serif; font-weight: 900; text-align: center; line-height: 1; }
+.logo span { display: block; font-size: 2.6em; letter-spacing: 0.08em; }
+.logo b { display: block; font-size: 3.3em; color: var(--ion); }
+.tag { text-align: center; color: var(--dim); }
+.stack { display: flex; flex-direction: column; gap: 0.55em; }
+.row { display: flex; gap: 0.5em; flex-wrap: wrap; }
+.row > .btn { flex: 1 1 0; }
+.btn {
+  font: inherit; font-family: "Orbitron", "Segoe UI", Arial, sans-serif; font-weight: 700; font-size: 0.95em;
+  color: var(--ink); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 10px; padding: 0.75em 0.9em; cursor: pointer; letter-spacing: 0.03em;
+  display: flex; flex-direction: column; align-items: center; gap: 0.2em; min-width: 0;
+}
+.btn:hover { background: rgba(255,255,255,0.14); }
+.btn:focus-visible, .overlay input:focus-visible, .hudbtns button:focus-visible, .toggle input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.btn.primary { background: var(--ion); border-color: var(--ion); color: #fff; font-size: 1.1em; }
+.btn.primary:hover { background: #ff66b3; }
+.btn.small { font-size: 0.8em; padding: 0.6em 0.5em; }
+.btn small { font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 0.78em; color: var(--dim); letter-spacing: 0; }
+.btn.primary small { color: #ffe0ef; }
+.toggle { display: flex; gap: 0.7em; align-items: flex-start; cursor: pointer; padding: 0.6em 0.7em; border-radius: 10px; background: rgba(255,255,255,0.04); }
+.toggle input { margin-top: 0.2em; accent-color: var(--ion); width: 1.1em; height: 1.1em; flex: none; }
+.toggle span { display: flex; flex-direction: column; gap: 0.15em; }
+.toggle small { color: var(--dim); font-size: 0.85em; }
+.route { display: flex; flex-wrap: wrap; gap: 0.35em; align-items: center; justify-content: center; font-size: 0.85em; }
+.chip { padding: 0.25em 0.6em; border-radius: 99px; border: 1px solid currentColor; opacity: 0.45; }
+.chip.on { opacity: 1; }
+.arrow { color: var(--dim); }
+.rec { text-align: center; color: var(--gold); font-weight: 600; }
+.scores { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5em; text-align: center; }
+.scores b { display: block; font-family: "Orbitron", sans-serif; font-size: 2.3em; font-variant-numeric: tabular-nums; }
+.scores span { font-size: 0.75em; letter-spacing: 0.1em; color: var(--dim); }
+.gold { color: var(--gold); }
+.badges { display: flex; gap: 0.5em; justify-content: center; flex-wrap: wrap; }
+.badge { font-family: "Orbitron", sans-serif; font-size: 0.75em; font-weight: 700; padding: 0.35em 0.8em; border-radius: 99px; background: var(--gold); color: #1a1204; }
+.badge.medal { background: transparent; border: 1px solid currentColor; }
+.stats { text-align: center; color: var(--dim); font-size: 0.9em; font-variant-numeric: tabular-nums; }
+.fact { background: rgba(242,181,68,0.08); border: 1px solid rgba(242,181,68,0.25); border-radius: 10px; padding: 0.8em 0.9em; display: flex; flex-direction: column; gap: 0.35em; }
+.fact p { font-size: 0.92em; }
+ol.rank { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25em; font-variant-numeric: tabular-nums; }
+ol.rank li { display: grid; grid-template-columns: 2em 1fr auto; gap: 0.5em; padding: 0.45em 0.6em; border-radius: 6px; background: rgba(255,255,255,0.04); }
+ol.rank li:first-child { color: var(--gold); }
+ol.rank li.me { outline: 1px solid var(--ion); }
+ol.rank b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ol.rank .bar { display: block; height: 0.55em; margin-top: 0.35em; border-radius: 99px; background: var(--ion); opacity: 0.7; }
+ol.rank em { font-style: normal; font-weight: 600; }
+.legend { display: grid; grid-template-columns: 2.2em 1fr; gap: 0.55em 0.7em; align-items: center; font-size: 0.92em; }
+.ico { width: 2.2em; height: 2.2em; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 0.72em; color: #0a1624; }
+.ico.hex { clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%); border-radius: 0; }
+.diagram { width: 100%; height: auto; display: block; background: rgba(255,255,255,0.03); border-radius: 10px; }
+.eq { font-size: 0.88em; display: grid; gap: 0.3em; background: rgba(255,255,255,0.04); padding: 0.7em 0.8em; border-radius: 8px; }
+.eq b { color: var(--dim); font-weight: 500; }
+.map { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+.map th { text-align: left; color: var(--dim); font-weight: 500; padding: 0.3em 0.4em; border-bottom: 1px solid var(--line); }
+.map td { padding: 0.45em 0.4em; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.4; }
+.map td:first-child { white-space: nowrap; color: var(--ink); font-weight: 600; }
+.toast { position: absolute; left: 50%; bottom: calc(var(--u) * 34px); transform: translateX(-50%); z-index: 4; background: var(--ink); color: #0a1624; padding: 0.5em 0.9em; border-radius: 8px; font-size: calc(var(--u) * 12px); max-width: 85%; text-align: center; }
+.hint { text-align: center; color: var(--dim); font-size: 0.85em; }
 </style>
 </head>
 <body>
 
+
 <main class="app">
   <header class="bar">
     <h1>Flappy <span class="li">Li⁺</span></h1>
-    <p>Celda de ion-litio · electrolito LiPF₆</p>
+    <p id="subtitle"></p>
+    <select id="lang" aria-label="Idioma / Language">
+      <option value="es">ES · Español</option>
+      <option value="en">EN · English</option>
+    </select>
   </header>
-  <div class="stage"><canvas id="game" aria-label="Juego Flappy Li⁺"></canvas></div>
-  <p class="help"><kbd>Espacio</kbd> o toque para impulsar · <kbd>P</kbd> pausa · <kbd>M</kbd> sonido</p>
+  <div class="stage">
+    <div class="screen" id="screen">
+      <canvas id="game" aria-label="Flappy Li⁺"></canvas>
+      <div class="hudbtns">
+        <button id="btnPause" type="button" aria-label="Pausa"></button>
+        <button id="btnMute" type="button" aria-label="Sonido"></button>
+      </div>
+      <div class="overlay" id="overlay"></div>
+      <div class="toast" id="toast" hidden></div>
+    </div>
+  </div>
+  <p class="help" id="help"></p>
 </main>
-<script>
-// Flappy Li⁺ — motor del juego (JavaScript puro, sin dependencias).
-// Todo el estado vive aquí, fuera de React, para que el bucle no se reinicie
-// con cada cambio de puntuación.
 
-const W = 400;
-const H = 600;
-const CASING = 22; // carcasa superior e inferior
-const ELECTRODE = 16; // franjas de ánodo/cátodo en los bordes
-const ION_X = 110;
-const ION_R = 14;
-const HIT_R = ION_R * 0.82; // hitbox algo más pequeña que el dibujo: más justo
-const G = 1500;
-const JUMP = -430;
-const MAX_FALL = 620;
-const MEM_W = 58;
-const SPACING = 235; // distancia horizontal entre membranas
-const MEMBRANES_PER_CYCLE = 10;
+<script>
+(() => {
+"use strict";
+
+// Dirección pública del juego (se usa al compartir)
+const CONFIG = { GAME_URL: "https://pedrojns.github.io/flappy-li/" };
+
+// ---------------- Constantes del juego ----------------
+const W = 400, H = 600;
+const CASING = 22, ELECTRODE = 16;
+const ION_X = 110, ION_R = 14, HIT_R = ION_R * 0.82;
+const FIELD = 1500, JUMP = 430, MAX_V = 620;
+const MEM_W = 58, SPACING = 235, PER_PHASE = 10;
+
+const LEVELS = [
+  { id: "lco", cathode: "LiCoO₂", color: "#4a8be0", dark: "#1f4f8a", volt: 3.7, cap: 140, gap: 180, gapMin: 152, speed: 150, dendrite: 0.10, bubble: 0.22, bg: ["#10263a", "#0a1624"], anode: "C₆" },
+  { id: "lfp", cathode: "LiFePO₄", color: "#7cc47f", dark: "#2f6b3a", volt: 3.2, cap: 160, gap: 172, gapMin: 146, speed: 166, dendrite: 0.16, bubble: 0.28, bg: ["#0f2b29", "#081716"], anode: "C₆" },
+  { id: "nmc", cathode: "NMC811", color: "#b48cff", dark: "#4f3a8a", volt: 3.6, cap: 200, gap: 164, gapMin: 140, speed: 182, dendrite: 0.22, bubble: 0.34, bg: ["#1b1935", "#0d0b1e"], anode: "C₆" },
+  { id: "ssb", cathode: "NMC811", color: "#e8c9a0", dark: "#7a5f40", volt: 3.8, cap: 200, gap: 158, gapMin: 136, speed: 196, dendrite: 0.32, bubble: 0, bg: ["#2a2320", "#141010"], anode: "Li⁰", solid: true },
+];
+
+const POWER = {
+  fec: { label: "FEC", color: "#5ee0b0", dur: 6 },
+  sei: { label: "SEI", color: "#a894ff", dur: 0 },
+  slow: { label: "σ↑", color: "#ffe066", dur: 5 },
+};
 
 const KEYS = {
-  scores: "flappyLiScores",
-  record: "flappyLiRecord",
-  muted: "flappyLiMuted",
+  scores: "flappyLiScores", record: "flappyLiRecord", muted: "flappyLiMuted",
+  daily: "flappyLiDaily", name: "flappyLiName", lang: "flappyLiLang",
+  teacher: "flappyLiTeacher", maxLevel: "flappyLiMaxLevel",
 };
 
-const C = {
-  electrolyte0: "#0a1624",
-  electrolyte1: "#10263a",
-  casing: "#1b232c",
-  casingLine: "#2c3844",
-  anode: "#2b2f35",
-  anodeLine: "#4a525c",
-  cathode: "#1f4f8a",
-  cathodeLine: "#3a7bd5",
-  membrane: "rgba(242, 181, 68, 0.20)",
-  membraneEdge: "#f2b544",
-  ion: "#ff4da6",
-  ionLight: "#ffa3cf",
-  electron: "#7fe3ff",
-  anion: "rgba(120, 170, 220, 0.35)",
-  text: "#e8f1f7",
-  textDim: "#8aa2b8",
-  panel: "rgba(8, 18, 30, 0.88)",
-  gold: "#f2b544",
+const FONT_D = "'Orbitron', 'Segoe UI', Arial, sans-serif";
+const FONT_M = "'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace";
+
+// ---------------- Textos ES / EN ----------------
+const I18N = {
+  es: {
+    subtitle: "Celda de ion-litio",
+    help: "<kbd>Espacio</kbd> o toque para impulsar · <kbd>P</kbd> pausa · <kbd>M</kbd> sonido",
+    tagline: "Guía el ion de litio por la celda: descarga hasta el cátodo y vuelve cargando al ánodo.",
+    play: "Jugar", daily: "Reto diario", dailySub: "Mismo recorrido para todos · {date}",
+    myGames: "Mis partidas", lastGames: "Últimas 10 partidas", localNote: "Se guardan solo en este navegador.", howto: "Cómo se juega", science: "La ciencia",
+    teacher: "Modo profesor · feria de ciencia", teacherHint: "Al terminar cada partida muestra la ciencia de la celda",
+    route: "Cátodos", record: "Récord", dailyBest: "Mejor de hoy",
+    energy: "ENERGÍA", best: "RÉCORD",
+    discharge: "DESCARGA", charge: "CARGA",
+    dischargeSub: "Ánodo → cátodo · la batería entrega energía",
+    chargeSub: "Cátodo → ánodo · el cargador invierte el campo",
+    levelN: "Nivel {n}", cycleDone: "¡Ciclo {n} completo!", field: "campo",
+    anode: "ÁNODO", cathode: "CÁTODO", dailyTag: "RETO {date}",
+    pause: "Pausa", resume: "Seguir", menu: "Menú", back: "Volver", retry: "Reintentar",
+    share: "Compartir", image: "Imagen", seeScience: "Ver la ciencia",
+    causeMembrane: "Choque con el separador", causeDendrite: "Atravesado por una dendrita", causeCasing: "Contra la carcasa",
+    pores: "poros", cycles: "ciclos", electrons: "e⁻",
+    newRecord: "¡NUEVO RÉCORD!", medal: "Medalla {m}",
+    medals: { bronze: "Bronce", silver: "Plata", gold: "Oro", platinum: "Platino" },
+    didYouKnow: "¿Sabías que…?",
+    localEmpty: "Todavía no has jugado en este navegador.",
+    copied: "Resultado copiado. Pégalo donde quieras.",
+    shareText: "⚡ {score} de energía en Flappy Li⁺ ({level}, {cycles} ciclos). ¿Me superas?",
+    shareDaily: "⚡ Reto diario {date} de Flappy Li⁺: {score} de energía. ¿Me superas?",
+    spaceRetry: "Pulsa Espacio para reintentar",
+    howtoTitle: "Cómo se juega",
+    howtoPhases: "Cada nivel es un ciclo completo: 10 poros de descarga (ánodo → cátodo) y 10 de carga (cátodo → ánodo). En la carga el campo se invierte y el ion «cae» hacia arriba. Cada ciclo pasa al siguiente cátodo: LiCoO₂ → LiFePO₄ → NMC811 → estado sólido.",
+    howtoControls: "Espacio, ↑, W, Enter, clic o toque para impulsar el ion contra el campo. P o Esc para pausar, M para el sonido.",
+    legend: [
+      ["pore", "Poro del separador: +10"],
+      ["e", "Electrón e⁻: +5"],
+      ["fec", "FEC: aditivo que ensancha los poros 6 s"],
+      ["sei", "Escudo SEI: aguanta un choque"],
+      ["slow", "Alta conductividad: cámara lenta 5 s"],
+      ["dendrite", "Dendrita de litio: crece desde el lado del campo y es mortal"],
+      ["bubble", "Burbuja de gas: no mata, pero te empuja"],
+      ["moving", "Membrana SEI naranja: se mueve"],
+    ],
+    medalsLine: "Medallas por poros: Bronce 10 · Plata 20 · Oro 40 · Platino 80.",
+    sciTitle: "La ciencia de la celda",
+    sciDischarge: "descarga", sciCharge: "carga",
+    sciCircuit: "circuito externo: e⁻",
+    sciSeparator: "separador", sciElectrolyte: "electrolito",
+    sciAnode: "ánodo", sciCathode: "cátodo",
+    sciLiquid: "LiPF₆ en carbonatos", sciSolid: "LLZO (cerámico)",
+    sciGraphite: "grafito", sciLiMetal: "litio metal",
+    sciReactions: "Reacciones en la descarga (en la carga ocurren al revés)",
+    sciAnodeR: "Ánodo", sciCathodeR: "Cátodo",
+    sciMapTitle: "Lo que has simulado",
+    sciGame: "En el juego", sciReal: "En una batería real",
+    sciRun: "Tu partida",
+    sciRunText: "Has completado {phases} semiciclos ({cycles} ciclos completos), has atravesado {pores} poros y has llegado a la celda de {level}. Tensión nominal de ese sistema: {volt} V. Capacidad práctica típica del cátodo: unos {cap} mAh/g.",
+    sciNoRun: "Juega una partida y aquí verás lo que has simulado.",
+    sciNote: "Simplificaciones: en una celda real no viaja un ion solo sino muchísimos a la vez, por difusión y migración, y no hay gravedad que importe. El juego exagera cada fenómeno para que se vea.",
+    map: [
+      ["Ion Li⁺", "Ion de litio que cruza el electrolito entre los electrodos"],
+      ["Poros amarillos", "Poros del separador de PE/PP, una lámina de unos 20 µm"],
+      ["Membrana SEI móvil", "La SEI real es una capa fija de nanómetros sobre el ánodo"],
+      ["Dendritas", "Litio metálico que se deposita al cargar rápido o en frío"],
+      ["Burbujas", "Gases que salen al descomponerse el electrolito"],
+      ["Electrones e⁻", "En una batería real los e⁻ no cruzan el electrolito: van por el circuito externo"],
+      ["Campo invertido", "El cargador impone el sentido de la corriente al cargar"],
+      ["FEC", "Aditivo real del electrolito que forma una SEI más estable"],
+      ["σ↑", "Más conductividad iónica: los iones se mueven con menos pérdidas"],
+    ],
+    ssb: "Estado sólido",
+  },
+  en: {
+    subtitle: "Lithium-ion cell",
+    help: "<kbd>Space</kbd> or tap to boost · <kbd>P</kbd> pause · <kbd>M</kbd> sound",
+    tagline: "Guide the lithium ion through the cell: discharge to the cathode, then charge back to the anode.",
+    play: "Play", daily: "Daily challenge", dailySub: "Same course for everyone · {date}",
+    myGames: "My games", lastGames: "Last 10 games", localNote: "Saved only in this browser.", howto: "How to play", science: "The science",
+    teacher: "Teacher · science fair mode", teacherHint: "Shows the science of the cell after every game",
+    route: "Cathodes", record: "Best", dailyBest: "Today's best",
+    energy: "ENERGY", best: "BEST",
+    discharge: "DISCHARGE", charge: "CHARGE",
+    dischargeSub: "Anode → cathode · the battery delivers energy",
+    chargeSub: "Cathode → anode · the charger flips the field",
+    levelN: "Level {n}", cycleDone: "Cycle {n} complete!", field: "field",
+    anode: "ANODE", cathode: "CATHODE", dailyTag: "DAILY {date}",
+    pause: "Paused", resume: "Resume", menu: "Menu", back: "Back", retry: "Retry",
+    share: "Share", image: "Image", seeScience: "See the science",
+    causeMembrane: "Hit the separator", causeDendrite: "Pierced by a dendrite", causeCasing: "Hit the casing",
+    pores: "pores", cycles: "cycles", electrons: "e⁻",
+    newRecord: "NEW BEST!", medal: "{m} medal",
+    medals: { bronze: "Bronze", silver: "Silver", gold: "Gold", platinum: "Platinum" },
+    didYouKnow: "Did you know?",
+    localEmpty: "You haven't played in this browser yet.",
+    copied: "Result copied. Paste it anywhere.",
+    shareText: "⚡ {score} energy in Flappy Li⁺ ({level}, {cycles} cycles). Can you beat me?",
+    shareDaily: "⚡ Flappy Li⁺ daily challenge {date}: {score} energy. Can you beat me?",
+    spaceRetry: "Press Space to retry",
+    howtoTitle: "How to play",
+    howtoPhases: "Each level is a full cycle: 10 discharge pores (anode → cathode) and 10 charge pores (cathode → anode). While charging the field flips and the ion “falls” upwards. Each cycle moves on to the next cathode: LiCoO₂ → LiFePO₄ → NMC811 → solid-state.",
+    howtoControls: "Space, ↑, W, Enter, click or tap to push the ion against the field. P or Esc to pause, M for sound.",
+    legend: [
+      ["pore", "Separator pore: +10"],
+      ["e", "Electron e⁻: +5"],
+      ["fec", "FEC: additive that widens the pores for 6 s"],
+      ["sei", "SEI shield: survives one hit"],
+      ["slow", "High conductivity: slow motion for 5 s"],
+      ["dendrite", "Lithium dendrite: grows from the field side and is deadly"],
+      ["bubble", "Gas bubble: harmless, but pushes you"],
+      ["moving", "Orange SEI membrane: it moves"],
+    ],
+    medalsLine: "Medals by pores: Bronze 10 · Silver 20 · Gold 40 · Platinum 80.",
+    sciTitle: "The science of the cell",
+    sciDischarge: "discharge", sciCharge: "charge",
+    sciCircuit: "external circuit: e⁻",
+    sciSeparator: "separator", sciElectrolyte: "electrolyte",
+    sciAnode: "anode", sciCathode: "cathode",
+    sciLiquid: "LiPF₆ in carbonates", sciSolid: "LLZO (ceramic)",
+    sciGraphite: "graphite", sciLiMetal: "lithium metal",
+    sciReactions: "Discharge reactions (charging runs them in reverse)",
+    sciAnodeR: "Anode", sciCathodeR: "Cathode",
+    sciMapTitle: "What you simulated",
+    sciGame: "In the game", sciReal: "In a real battery",
+    sciRun: "Your game",
+    sciRunText: "You completed {phases} half-cycles ({cycles} full cycles), crossed {pores} pores and reached the {level} cell. Nominal voltage of that system: {volt} V. Typical practical cathode capacity: about {cap} mAh/g.",
+    sciNoRun: "Play a game and you'll see here what you simulated.",
+    sciNote: "Simplifications: in a real cell it isn't one ion travelling but an enormous number at once, by diffusion and migration, and gravity plays no part. The game exaggerates each phenomenon so you can see it.",
+    map: [
+      ["Li⁺ ion", "Lithium ion crossing the electrolyte between the electrodes"],
+      ["Yellow pores", "Pores in the PE/PP separator, a film about 20 µm thick"],
+      ["Moving SEI", "The real SEI is a fixed nanometre-thin layer on the anode"],
+      ["Dendrites", "Lithium metal plating during fast or cold charging"],
+      ["Bubbles", "Gases released when the electrolyte decomposes"],
+      ["e⁻ electrons", "In a real battery e⁻ never cross the electrolyte: they go through the external circuit"],
+      ["Flipped field", "The charger sets the direction of the current while charging"],
+      ["FEC", "Real electrolyte additive that forms a more stable SEI"],
+      ["σ↑", "Higher ionic conductivity: ions move with smaller losses"],
+    ],
+    ssb: "Solid-state",
+  },
 };
 
-const FONT_DISPLAY = "'Orbitron', 'Segoe UI', Arial, sans-serif";
-const FONT_MONO = "'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace";
+const FACTS = {
+  sep: {
+    es: "El separador es una lámina de polietileno o polipropileno de unos 20 µm con poros de decenas de nanómetros. Deja pasar los iones Li⁺ del electrolito, pero impide que ánodo y cátodo se toquen y provoquen un cortocircuito.",
+    en: "The separator is a polyethylene or polypropylene film about 20 µm thick with pores tens of nanometres wide. It lets Li⁺ ions through the electrolyte but keeps the anode and cathode from touching and short-circuiting.",
+  },
+  sei: {
+    es: "La SEI (interfase de electrolito sólido) es una capa de pocos nanómetros que se forma sobre el grafito en las primeras cargas, al descomponerse el electrolito. Consume algo de litio, pero luego protege el ánodo y deja pasar los Li⁺.",
+    en: "The SEI (solid electrolyte interphase) is a few-nanometre layer that forms on graphite during the first charges as the electrolyte decomposes. It consumes some lithium, but then protects the anode while letting Li⁺ through.",
+  },
+  dendrite: {
+    es: "Si se carga demasiado rápido o a baja temperatura, el litio puede depositarse como metal sobre el ánodo en vez de intercalarse. Así crecen dendritas que pueden perforar el separador y causar un cortocircuito.",
+    en: "When charging too fast or at low temperature, lithium can plate as metal on the anode instead of intercalating. That grows dendrites that can pierce the separator and cause a short circuit.",
+  },
+  gas: {
+    es: "Con temperatura alta o sobrecarga, los disolventes carbonatados del electrolito se descomponen y liberan gases como CO₂ o etileno. Por eso algunas baterías de bolsa (pouch) se hinchan.",
+    en: "At high temperature or overcharge, the carbonate solvents in the electrolyte decompose and release gases such as CO₂ or ethylene. That's why some pouch cells swell.",
+  },
+  fec: {
+    es: "El carbonato de fluoroetileno (FEC) se añade en pequeñas proporciones al electrolito para formar una SEI más estable, sobre todo en ánodos con silicio.",
+    en: "Fluoroethylene carbonate (FEC) is added to the electrolyte in small amounts to build a more stable SEI, especially on silicon-containing anodes.",
+  },
+  lco: {
+    es: "El LiCoO₂ fue el cátodo de la primera batería de ion-litio comercial (Sony, 1991). Trabaja a unos 3,7 V, pero el cobalto es caro y su extracción plantea problemas éticos.",
+    en: "LiCoO₂ was the cathode of the first commercial lithium-ion battery (Sony, 1991). It works at about 3.7 V, but cobalt is expensive and its mining raises ethical concerns.",
+  },
+  lfp: {
+    es: "El LiFePO₄ tiene estructura de olivino. Da menos tensión (unos 3,2 V), pero es muy estable y seguro y aguanta miles de ciclos. Por eso se usa en autobuses y en almacenamiento estacionario.",
+    en: "LiFePO₄ has an olivine structure. It gives a lower voltage (about 3.2 V) but is very stable and safe and lasts thousands of cycles, which is why it's used in buses and stationary storage.",
+  },
+  nmc: {
+    es: "NMC811 quiere decir níquel, manganeso y cobalto en proporción 8:1:1. Más níquel da más capacidad y requiere menos cobalto, a cambio de menos estabilidad térmica.",
+    en: "NMC811 means nickel, manganese and cobalt in an 8:1:1 ratio. More nickel gives more capacity and needs less cobalt, at the cost of lower thermal stability.",
+  },
+  ssb: {
+    es: "Las baterías de estado sólido sustituyen el electrolito líquido por un sólido cerámico o polimérico, como el granate LLZO. Permitirían usar litio metálico en el ánodo, pero las dendritas siguen siendo un reto.",
+    en: "Solid-state batteries replace the liquid electrolyte with a ceramic or polymer solid, such as LLZO garnet. They would allow a lithium-metal anode, but dendrites remain a challenge.",
+  },
+  intercalation: {
+    es: "En la carga, los Li⁺ salen del cátodo, cruzan el electrolito y se intercalan entre las capas de grafito hasta formar LiC₆. En la descarga hacen el camino inverso mientras los electrones van por el circuito externo.",
+    en: "When charging, Li⁺ ions leave the cathode, cross the electrolyte and intercalate between graphite layers up to LiC₆. On discharge they go back while the electrons travel through the external circuit.",
+  },
+  electrolyte: {
+    es: "El electrolito más común es LiPF₆ disuelto en carbonatos orgánicos como EC y DMC. Conduce iones, no electrones: los electrones siempre van por fuera.",
+    en: "The most common electrolyte is LiPF₆ dissolved in organic carbonates such as EC and DMC. It conducts ions, not electrons: electrons always go around the outside.",
+  },
+  cycle: {
+    es: "Un ciclo es una carga y una descarga completas. La batería de un móvil suele conservar alrededor del 80 % de su capacidad tras 500–1000 ciclos.",
+    en: "A cycle is one full charge and discharge. A phone battery typically keeps around 80 % of its capacity after 500–1000 cycles.",
+  },
+  conductivity: {
+    es: "Un buen electrolito líquido tiene una conductividad iónica de unos 10 mS/cm a temperatura ambiente. Cuanto mayor es, más rápido puede cargarse la batería sin perder tanta energía en forma de calor.",
+    en: "A good liquid electrolyte has an ionic conductivity of about 10 mS/cm at room temperature. The higher it is, the faster the battery can charge without losing as much energy as heat.",
+  },
+};
 
+const REACTIONS = {
+  lco: ["LiₓC₆ → C₆ + x Li⁺ + x e⁻", "Li₁₋ₓCoO₂ + x Li⁺ + x e⁻ → LiCoO₂"],
+  lfp: ["LiₓC₆ → C₆ + x Li⁺ + x e⁻", "FePO₄ + Li⁺ + e⁻ → LiFePO₄"],
+  nmc: ["LiₓC₆ → C₆ + x Li⁺ + x e⁻", "Li₁₋ₓNi₀.₈Mn₀.₁Co₀.₁O₂ + x Li⁺ + x e⁻ → LiNi₀.₈Mn₀.₁Co₀.₁O₂"],
+  ssb: ["Li → Li⁺ + e⁻", "Li₁₋ₓNi₀.₈Mn₀.₁Co₀.₁O₂ + x Li⁺ + x e⁻ → LiNi₀.₈Mn₀.₁Co₀.₁O₂"],
+};
+
+// ---------------- Utilidades ----------------
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const rand = (a, b) => a + Math.random() * (b - a);
-
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function load(key, fallback) {
-  try {
-    const v = localStorage.getItem(key);
-    return v == null ? fallback : JSON.parse(v);
-  } catch {
-    return fallback;
-  }
+  try { const v = localStorage.getItem(key); return v == null ? fallback : JSON.parse(v); } catch { return fallback; }
 }
-function store(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* almacenamiento no disponible: se juega igual */
-  }
+function store(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* sin almacenamiento */ } }
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
+function seedFrom(s) { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+const todayUTC = () => new Date().toISOString().slice(0, 10);
 
-function makeAudio() {
+let lang = load(KEYS.lang, null) || ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en");
+if (!I18N[lang]) lang = "es";
+function t(key, vars) {
+  let s = I18N[lang][key];
+  if (s == null) s = I18N.es[key];
+  if (typeof s !== "string") return s;
+  if (vars) for (const k in vars) s = s.split(`{${k}}`).join(vars[k]);
+  return s;
+}
+const fmtDate = (d) => { const [y, m, dd] = d.split("-"); return lang === "es" ? `${dd}/${m}/${y}` : `${y}-${m}-${dd}`; };
+const levelName = (L) => (L.id === "ssb" ? t("ssb") : L.cathode);
+
+// ---------------- Sonido ----------------
+const audio = (() => {
   let ac = null;
   let muted = !!load(KEYS.muted, false);
   const ensure = () => {
     try {
-      if (!ac) {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (AC) ac = new AC();
-      }
+      if (!ac) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) ac = new AC(); }
       if (ac && ac.state === "suspended") ac.resume();
-    } catch {
-      ac = null;
-    }
+    } catch { ac = null; }
   };
-  const tone = (freq, dur, type = "sine", vol = 0.12, slideTo = null, delay = 0) => {
+  const tone = (f, dur, type = "sine", vol = 0.12, slide = null, delay = 0) => {
     if (muted || !ac) return;
-    const t = ac.currentTime + delay;
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.type = type;
-    o.frequency.setValueAtTime(freq, t);
-    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(ac.destination);
-    o.start(t);
-    o.stop(t + dur + 0.03);
+    const t0 = ac.currentTime + delay;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
+    g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0 + dur + 0.03);
   };
   return {
     ensure,
-    get muted() {
-      return muted;
-    },
-    toggle() {
-      muted = !muted;
-      store(KEYS.muted, muted);
-    },
+    get muted() { return muted; },
+    toggle() { muted = !muted; store(KEYS.muted, muted); },
     flap: () => tone(380, 0.11, "triangle", 0.1, 720),
-    score: () => {
-      tone(660, 0.07, "sine", 0.1);
-      tone(990, 0.1, "sine", 0.1, null, 0.06);
-    },
-    cycle: () => {
-      tone(523, 0.1, "triangle", 0.12);
-      tone(659, 0.1, "triangle", 0.12, null, 0.09);
-      tone(784, 0.18, "triangle", 0.12, null, 0.18);
-    },
+    score: () => { tone(660, 0.07, "sine", 0.1); tone(990, 0.1, "sine", 0.1, null, 0.06); },
+    phase: () => { tone(523, 0.1, "triangle", 0.12); tone(659, 0.1, "triangle", 0.12, null, 0.09); tone(784, 0.2, "triangle", 0.12, null, 0.18); },
+    level: () => { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.16, "triangle", 0.12, null, i * 0.09)); },
     electron: () => tone(1320, 0.07, "square", 0.05, 1900),
-    die: () => {
-      tone(320, 0.5, "sawtooth", 0.12, 55);
-      tone(90, 0.35, "square", 0.06, 40, 0.05);
-    },
+    power: () => { tone(440, 0.12, "sine", 0.12, 880); tone(880, 0.15, "sine", 0.08, 1320, 0.1); },
+    shield: () => tone(200, 0.25, "square", 0.08, 90),
+    die: () => { tone(320, 0.5, "sawtooth", 0.12, 55); tone(90, 0.35, "square", 0.06, 40, 0.05); },
   };
+})();
+
+// ---------------- DOM ----------------
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const screenEl = document.getElementById("screen");
+const overlay = document.getElementById("overlay");
+const toastEl = document.getElementById("toast");
+const btnPause = document.getElementById("btnPause");
+const btnMute = document.getElementById("btnMute");
+const langSel = document.getElementById("lang");
+
+let scale = 1, dpr = 1;
+function resize() {
+  const parent = screenEl.parentElement;
+  const availW = parent.clientWidth, availH = parent.clientHeight || window.innerHeight;
+  scale = Math.max(0.5, Math.min(availW / W, availH / H));
+  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const cw = Math.floor(W * scale), ch = Math.floor(H * scale);
+  screenEl.style.width = cw + "px"; screenEl.style.height = ch + "px";
+  screenEl.style.setProperty("--u", scale.toFixed(3));
+  canvas.style.width = cw + "px"; canvas.style.height = ch + "px";
+  canvas.width = Math.floor(cw * dpr); canvas.height = Math.floor(ch * dpr);
+}
+new ResizeObserver(resize).observe(screenEl.parentElement);
+resize();
+
+// ---------------- Estado ----------------
+let state = "menu";      // menu | play | paused | dead
+let ui = "menu";         // pantalla del overlay
+let mode = "normal";     // normal | daily
+let rng = Math.random;
+let time = 0, wtime = 0, deadAt = 0, last = 0;
+let ion, mems, items, dendrites, bubbles, particles, floaters;
+let levelIdx, phase, phaseCount, passedTotal, phasesDone, score, collected, speed;
+let lastGapY, lastAmp, spawnDist, slot, trans, banner, fx, wide, shake, flash, ionSX, grainOff;
+let lastRun = null, currentFact = null;
+let record = Number(load(KEYS.record, 0)) || 0;
+let history = load(KEYS.scores, []); if (!Array.isArray(history)) history = [];
+let maxLevel = Number(load(KEYS.maxLevel, 0)) || 0;
+let teacher = !!load(KEYS.teacher, false);
+
+const lvl = () => LEVELS[Math.min(levelIdx, LEVELS.length - 1)];
+const extra = () => Math.max(0, levelIdx - (LEVELS.length - 1));
+const dir = () => (phase === "discharge" ? 1 : -1);
+const computeSpeed = () => lvl().speed + extra() * 12 + phaseCount * 2.2 + (phase === "charge" ? 8 : 0);
+
+function dailyBest() {
+  const d = load(KEYS.daily, null);
+  return d && d.date === todayUTC() ? d.best : 0;
 }
 
-function medalFor(membranes) {
-  if (membranes >= 80) return { name: "Platino", color: "#cfe8ff" };
-  if (membranes >= 40) return { name: "Oro", color: "#f2c14e" };
-  if (membranes >= 20) return { name: "Plata", color: "#c3ccd6" };
-  if (membranes >= 10) return { name: "Bronce", color: "#d08a4f" };
+function reset() {
+  ion = { y: H / 2, vy: 0, squash: 0 };
+  mems = []; items = []; dendrites = []; bubbles = []; particles = []; floaters = [];
+  levelIdx = 0; phase = "discharge"; phaseCount = 0; passedTotal = 0; phasesDone = 0;
+  score = 0; collected = 0;
+  lastGapY = H / 2; lastAmp = 0; spawnDist = SPACING - 90; slot = 0;
+  trans = 0; banner = null; fx = { fec: 0, slow: 0, shield: false, inv: 0 }; wide = 1;
+  shake = 0; flash = 0; ionSX = ION_X; grainOff = 0; wtime = 0;
+  speed = computeSpeed();
+}
+reset();
+
+// Fondo: aniones PF₆⁻ del electrolito líquido
+const anions = Array.from({ length: 22 }, () => ({ x: rand(0, W), y: rand(CASING + 10, H - CASING - 10), r: rand(3, 7), depth: rand(0.15, 0.5) }));
+
+// Texturas precalculadas
+function makeTile(w, h, draw) { const c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d")); return ctx.createPattern(c, "repeat"); }
+const porePattern = makeTile(12, 12, (p) => { p.fillStyle = "rgba(242,181,68,0.35)"; p.beginPath(); p.arc(3, 3, 1.3, 0, 7); p.arc(9, 9, 1.3, 0, 7); p.fill(); });
+const grainPattern = makeTile(90, 90, (p) => {
+  const r = mulberry32(7);
+  for (let i = 0; i < 14; i++) {
+    const cx = r() * 90, cy = r() * 90, rad = 8 + r() * 10, n = 5 + Math.floor(r() * 3);
+    p.beginPath();
+    for (let k = 0; k < n; k++) { const a = (k / n) * Math.PI * 2 + r() * 0.4; const rr = rad * (0.75 + r() * 0.3); p[k ? "lineTo" : "moveTo"](cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+    p.closePath();
+    p.fillStyle = `rgba(232,201,160,${0.04 + r() * 0.05})`; p.fill();
+    p.strokeStyle = "rgba(232,201,160,0.12)"; p.stroke();
+  }
+});
+
+// ---------------- Generación de nivel ----------------
+function spawn() {
+  const L = lvl(), ex = extra(), gd = dir();
+  const gap = Math.max(L.gapMin - ex * 4, L.gap - phaseCount * 2.5 - ex * 4);
+  const minC = CASING + gap / 2 + 24, maxC = H - CASING - gap / 2 - 24;
+  const prevC = lastGapY, prevAmp = lastAmp;
+  const c = clamp(prevC + (rng() * 2 - 1) * 170, minC, maxC);
+  const movingP = Math.min(0.5, levelIdx * 0.1 + (phase === "charge" ? 0.12 : 0) + (phaseCount >= 5 ? 0.08 : 0));
+  const moving = slot >= 2 && rng() < movingP;
+  const amp = moving ? 28 + rng() * 27 : 0;
+  mems.push({ x: W, c, base: c, gap, minC, maxC, moving, amp, ph: rng() * 6.283, counted: false });
+  lastGapY = c; lastAmp = amp;
+
+  if (slot >= 1) {
+    const cx = W - (SPACING - MEM_W) / 2; // centro del pasillo entre la membrana anterior y esta
+    const r = rng();
+    let placed = false;
+    if (slot >= 2 && r < L.dendrite) {
+      // La dendrita nunca tapa el camino: su punta queda lejos de ambos huecos
+      const allowed = gd > 0
+        ? (H - CASING) - (Math.max(prevC + prevAmp, c + amp) + 50)
+        : (Math.min(prevC - prevAmp, c - amp) - 50) - CASING;
+      const h = Math.min(allowed, 60 + rng() * 150);
+      if (h >= 40) {
+        const branches = Array.from({ length: 3 + Math.floor(Math.random() * 3) }, () => ({ at: rand(0.2, 0.8), len: rand(10, 22), side: Math.random() < 0.5 ? -1 : 1 }));
+        dendrites.push({ x: cx, maxH: h, h: 0, side: gd, branches });
+        placed = true;
+      }
+    }
+    const r2 = rng();
+    if (!placed && r2 < 0.14) {
+      const types = ["fec", "sei", "slow"];
+      items.push({ kind: types[Math.floor(rng() * 3)], x: cx, y: clamp((prevC + c) / 2, CASING + 40, H - CASING - 40), bob: Math.random() * 6.28 });
+    } else if (!placed && r2 < 0.6) {
+      items.push({ kind: "e", x: cx, y: clamp((prevC + c) / 2 + (rng() * 2 - 1) * 55, CASING + 30, H - CASING - 30), bob: Math.random() * 6.28 });
+    }
+    if (!L.solid && rng() < L.bubble) {
+      bubbles.push({ x: cx + (rng() * 2 - 1) * 30, y: H - CASING - 30 - rng() * 140, r: 14 + rng() * 14, rise: 25 + rng() * 25, co2: rng() < 0.5 });
+    }
+  }
+  slot++;
+}
+
+// ---------------- Efectos ----------------
+function burst(x, y, n, color, spd = 180) {
+  for (let i = 0; i < n; i++) {
+    const a = rand(0, Math.PI * 2), s = rand(spd * 0.3, spd);
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.4, 0.9), max: 0.9, r: rand(1.5, 3.5), color, grav: true });
+  }
+}
+function floatText(text, x, y, color) { floaters.push({ text, x, y, color, life: 0.9 }); }
+
+// ---------------- Lógica ----------------
+function flap() { ion.vy = -JUMP * dir(); ion.squash = 1; audio.flap(); }
+
+function startGame(m) {
+  mode = m;
+  rng = m === "daily" ? mulberry32(seedFrom("flappy-li:" + todayUTC())) : mulberry32((Math.random() * 2 ** 32) >>> 0);
+  reset();
+  state = "play"; ui = "none";
+  banner = { title: t("discharge"), sub: t("dischargeSub"), t: 2 };
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  render();
+  flap();
+}
+
+function useShield() {
+  if (!fx.shield) return false;
+  fx.shield = false; fx.inv = 1.2; shake = 6;
+  burst(ionSX, ion.y, 22, POWER.sei.color, 200);
+  audio.shield();
+  return true;
+}
+
+function completePhase() {
+  score += 50; phasesDone++;
+  floatText("+50", ionSX, ion.y - 30, "#f2b544");
+  if (phase === "discharge") {
+    phase = "charge";
+    banner = { title: t("charge"), sub: t("chargeSub"), t: 2.4 };
+    audio.phase();
+  } else {
+    levelIdx++;
+    phase = "discharge";
+    if (levelIdx > maxLevel) { maxLevel = levelIdx; store(KEYS.maxLevel, Math.min(maxLevel, LEVELS.length - 1)); }
+    const L = lvl();
+    const lvName = levelName(L) + (extra() ? ` +${extra()}` : "");
+    banner = { title: `${t("levelN", { n: levelIdx + 1 })} · ${lvName}`, sub: t("cycleDone", { n: levelIdx }), t: 2.6 };
+    audio.level();
+  }
+  for (const m of mems) burst(m.x, m.c, 4, "#f2b544", 120);
+  mems = []; items = []; dendrites = []; bubbles = [];
+  phaseCount = 0; slot = 0; spawnDist = SPACING - 90; lastGapY = H / 2; lastAmp = 0;
+  trans = 1.4; fx.inv = Math.max(fx.inv, 1.8);
+  speed = computeSpeed();
+}
+
+function die(cause) {
+  if (state !== "play") return;
+  state = "dead"; deadAt = time;
+  shake = 14; flash = 1;
+  burst(ionSX, ion.y, 36, "#ff4da6", 260);
+  audio.die();
+  const L = lvl();
+  let isNew = false;
+  if (mode === "normal") {
+    history.unshift(score); if (history.length > 10) history.length = 10; store(KEYS.scores, history);
+    if (score > record) { record = score; isNew = score > 0; store(KEYS.record, record); }
+  } else {
+    const prev = dailyBest();
+    if (score > prev) { isNew = score > 0; store(KEYS.daily, { date: todayUTC(), best: score }); }
+  }
+  lastRun = { score, pores: passedTotal, phases: phasesDone, cycles: levelIdx, levelIdx, level: L, cause, mode, date: todayUTC(), collected, isNew, phase };
+  currentFact = pickFact(cause, L);
+  ui = teacher ? "science" : "over";
+  setTimeout(() => { if (state === "dead") render(); }, 350);
+}
+
+function pickFact(cause, L) {
+  const pool = ["sep", "sei", "dendrite", "gas", "fec", "intercalation", "electrolyte", "cycle", "conductivity", L.id];
+  const byCause = { membrane: ["sep", "sei"], dendrite: ["dendrite"], casing: ["electrolyte", "intercalation", "cycle"] }[cause] || pool;
+  const list = Math.random() < 0.6 ? byCause : [L.id, ...pool];
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function circleRect(cx, cy, r, rx, ry, rw, rh) {
+  const nx = clamp(cx, rx, rx + rw), ny = clamp(cy, ry, ry + rh);
+  const dx = cx - nx, dy = cy - ny;
+  return dx * dx + dy * dy < r * r;
+}
+
+function update(dt) {
+  time += dt;
+  const paused = state === "paused";
+  const d = dir();
+  const drift = state === "play" ? speed : 45;
+  if (!paused) {
+    for (const a of anions) {
+      a.x -= drift * a.depth * dt * d;
+      if (a.x < -10) { a.x = W + 10; a.y = rand(CASING + 10, H - CASING - 10); }
+      if (a.x > W + 10) { a.x = -10; a.y = rand(CASING + 10, H - CASING - 10); }
+    }
+    grainOff += drift * 0.3 * dt * d;
+    for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; if (p.grav) p.vy += 300 * dt; p.life -= dt; }
+    particles = particles.filter((p) => p.life > 0);
+    for (const f of floaters) { f.y -= 40 * dt; f.life -= dt; }
+    floaters = floaters.filter((f) => f.life > 0);
+    shake = Math.max(0, shake - 40 * dt);
+    flash = Math.max(0, flash - 2.5 * dt);
+    if (banner) { banner.t -= dt; if (banner.t <= 0) banner = null; }
+  }
+
+  if (state === "menu") { ion.y = H / 2 - 40 + Math.sin(time * 2.4) * 10; ionSX = ION_X; return; }
+  if (state === "dead") {
+    const lim = d > 0 ? H - CASING - ION_R : CASING + ION_R;
+    ion.vy = clamp(ion.vy + FIELD * d * dt, -MAX_V, MAX_V);
+    ion.y = d > 0 ? Math.min(ion.y + ion.vy * dt, lim) : Math.max(ion.y + ion.vy * dt, lim);
+    return;
+  }
+  if (state !== "play") return;
+
+  // temporizadores de potenciadores (tiempo real)
+  fx.fec = Math.max(0, fx.fec - dt);
+  fx.slow = Math.max(0, fx.slow - dt);
+  fx.inv = Math.max(0, fx.inv - dt);
+  wide += ((fx.fec > 0 ? 1.45 : 1) - wide) * Math.min(1, dt * 4);
+  const wdt = dt * (fx.slow > 0 ? 0.6 : 1);
+  wtime += wdt;
+
+  const targetSX = d > 0 ? ION_X : W - ION_X;
+  ionSX += (targetSX - ionSX) * Math.min(1, dt * (trans > 0 ? 3 : 12));
+  ion.squash = Math.max(0, ion.squash - 5 * dt);
+
+  if (trans > 0) {
+    trans -= dt;
+    ion.vy = 0;
+    ion.y += (H / 2 - ion.y) * Math.min(1, dt * 3);
+    return;
+  }
+
+  // campo: en descarga hacia abajo, en carga hacia arriba
+  ion.vy = clamp(ion.vy + FIELD * d * wdt, -MAX_V, MAX_V);
+  ion.y += ion.vy * wdt;
+
+  if (Math.random() < 0.8) {
+    particles.push({ x: ionSX - d * ION_R * 0.6, y: ion.y + rand(-4, 4), vx: -speed * 0.6 * d, vy: rand(-15, 15), life: 0.35, max: 0.35, r: rand(1.5, 3), color: "#ffa3cf" });
+  }
+
+  spawnDist += speed * wdt;
+  if (spawnDist >= SPACING) { spawnDist -= SPACING; spawn(); }
+
+  // burbujas de gas: empujan al ion
+  for (const b of bubbles) {
+    b.x -= speed * wdt; b.y -= b.rise * wdt;
+    const dx = b.x - ION_X, dy = ion.y - b.y, dist = Math.hypot(dx, dy) || 1, range = b.r + ION_R + 26;
+    if (dist < range) ion.vy += (dy / dist) * (1 - dist / range) * 2600 * wdt;
+  }
+  bubbles = bubbles.filter((b) => {
+    const alive = b.x > -40 && b.y > CASING + b.r * 0.5;
+    if (!alive && b.x > -40) burst(d > 0 ? b.x : W - b.x, b.y, 6, "rgba(220,240,255,0.8)", 80);
+    return alive;
+  });
+
+  // carcasa
+  if (ion.y - HIT_R < CASING || ion.y + HIT_R > H - CASING) {
+    if (fx.inv > 0 || useShield()) {
+      ion.y = clamp(ion.y, CASING + ION_R, H - CASING - ION_R);
+      ion.vy = (ion.y < H / 2 ? 1 : -1) * 260;
+    } else { ion.y = clamp(ion.y, CASING + ION_R, H - CASING - ION_R); die("casing"); return; }
+  }
+
+  // membranas del separador
+  for (const m of mems) {
+    m.x -= speed * wdt;
+    if (m.moving) m.c = clamp(m.base + Math.sin(wtime * 1.7 + m.ph) * m.amp, m.minC, m.maxC);
+  }
+  while (mems.length && mems[0].x + MEM_W < -10) mems.shift();
+  for (const m of mems) {
+    const g = m.gap * wide, top = m.c - g / 2, bot = m.c + g / 2;
+    if (fx.inv <= 0 && (circleRect(ION_X, ion.y, HIT_R, m.x, -50, MEM_W, top + 50) || circleRect(ION_X, ion.y, HIT_R, m.x, bot, MEM_W, H - bot + 50))) {
+      if (!useShield()) { die("membrane"); return; }
+    }
+    if (!m.counted && m.x + MEM_W < ION_X - ION_R) {
+      m.counted = true; passedTotal++; phaseCount++; score += 10;
+      speed = computeSpeed();
+      if (phaseCount >= PER_PHASE) { completePhase(); return; }
+      audio.score();
+    }
+  }
+
+  // dendritas
+  for (const dd of dendrites) {
+    dd.x -= speed * wdt;
+    if (dd.x < W - 10 && dd.h < dd.maxH) dd.h = Math.min(dd.maxH, dd.h + dd.maxH * 1.4 * wdt);
+    if (fx.inv > 0 || dd.h < 4) continue;
+    const a = dd.side > 0 ? (H - CASING) - ion.y : ion.y - CASING;
+    if (a < dd.h + HIT_R * 0.5 && a > -HIT_R) {
+      const hw = 12 * (1 - clamp(a / dd.h, 0, 1));
+      if (Math.abs(ION_X - dd.x) < hw + HIT_R * 0.75) { if (!useShield()) { die("dendrite"); return; } }
+    }
+  }
+  dendrites = dendrites.filter((dd) => dd.x > -40);
+
+  // objetos recogibles
+  for (const it of items) {
+    it.x -= speed * wdt;
+    const y = it.y + Math.sin(wtime * 4 + it.bob) * 6;
+    const dx = it.x - ION_X, dy = y - ion.y;
+    if (dx * dx + dy * dy < (ION_R + 12) ** 2) {
+      it.taken = true;
+      const sx = d > 0 ? it.x : W - it.x;
+      if (it.kind === "e") { score += 5; collected++; audio.electron(); burst(sx, y, 10, "#7fe3ff", 140); floatText("+5", sx, y - 14, "#7fe3ff"); }
+      else {
+        const P = POWER[it.kind];
+        if (it.kind === "sei") fx.shield = true; else fx[it.kind] = P.dur;
+        audio.power(); burst(sx, y, 18, P.color, 170); floatText(P.label, sx, y - 16, P.color);
+      }
+    }
+  }
+  items = items.filter((it) => !it.taken && it.x > -20);
+}
+
+// ---------------- Dibujo ----------------
+const sxr = (x, w) => (dir() > 0 ? x : W - x - w);
+const sxp = (x) => (dir() > 0 ? x : W - x);
+
+function text(str, x, y, o = {}) {
+  ctx.font = `${o.weight || "700"} ${o.size || 16}px ${o.font || FONT_D}`;
+  ctx.fillStyle = o.color || "#e8f1f7";
+  ctx.textAlign = o.align || "center";
+  ctx.textBaseline = o.base || "alphabetic";
+  ctx.fillText(str, x, y);
+}
+function rr(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+function hexPath(x, y, r) { ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; ctx[k ? "lineTo" : "moveTo"](x + Math.cos(a) * r, y + Math.sin(a) * r); } ctx.closePath(); }
+
+function drawBackground() {
+  const L = lvl();
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, L.bg[0]); g.addColorStop(1, L.bg[1]);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  if (L.solid) {
+    ctx.save(); ctx.translate(-(grainOff % 90), 0); ctx.fillStyle = grainPattern; ctx.fillRect(0, 0, W + 90, H); ctx.restore();
+  } else {
+    ctx.strokeStyle = "rgba(120,170,220,0.32)"; ctx.lineWidth = 1.2;
+    for (const a of anions) {
+      ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(a.x - a.r * 0.45, a.y); ctx.lineTo(a.x + a.r * 0.45, a.y); ctx.stroke();
+    }
+  }
+}
+
+function drawCasing() {
+  const off = ((time * (state === "play" ? speed : 45)) % 14) * dir();
+  for (const y0 of [0, H - CASING]) {
+    ctx.fillStyle = "#1b232c"; ctx.fillRect(0, y0, W, CASING);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, y0, W, CASING); ctx.clip();
+    ctx.strokeStyle = "#2c3844"; ctx.lineWidth = 2;
+    for (let x = -CASING - 14 - off; x < W + CASING + 14; x += 14) { ctx.beginPath(); ctx.moveTo(x, y0 + CASING); ctx.lineTo(x + CASING, y0); ctx.stroke(); }
+    ctx.restore();
+  }
+  ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.fillRect(0, CASING - 1, W, 1); ctx.fillRect(0, H - CASING, W, 1);
+}
+
+function drawElectrodes() {
+  const L = lvl();
+  const target = state === "play" ? (dir() > 0 ? "cathode" : "anode") : null;
+  const pulse = 0.5 + 0.5 * Math.sin(time * 5);
+  // ánodo
+  ctx.fillStyle = L.solid ? "#8d99a6" : "#2b2f35";
+  ctx.fillRect(0, CASING, ELECTRODE, H - CASING * 2);
+  ctx.strokeStyle = L.solid ? "#b8c3ce" : "#4a525c"; ctx.lineWidth = 1;
+  for (let y = CASING + 4; y < H - CASING; y += 6) { ctx.beginPath(); ctx.moveTo(2, y); ctx.lineTo(ELECTRODE - 2, y); ctx.stroke(); }
+  // cátodo
+  ctx.fillStyle = L.dark; ctx.fillRect(W - ELECTRODE, CASING, ELECTRODE, H - CASING * 2);
+  ctx.fillStyle = L.color;
+  for (let y = CASING + 5; y < H - CASING; y += 9) { ctx.beginPath(); ctx.arc(W - ELECTRODE / 2, y, 2, 0, 7); ctx.fill(); }
+  if (target) {
+    const x = target === "cathode" ? W - ELECTRODE : ELECTRODE;
+    const gr = ctx.createLinearGradient(x, 0, x + (target === "cathode" ? -28 : 28), 0);
+    gr.addColorStop(0, `rgba(255,77,166,${0.25 + pulse * 0.2})`); gr.addColorStop(1, "rgba(255,77,166,0)");
+    ctx.fillStyle = gr; ctx.fillRect(target === "cathode" ? x - 28 : x, CASING, 28, H - CASING * 2);
+  }
+  ctx.save(); ctx.translate(ELECTRODE / 2 + 0.5, H / 2); ctx.rotate(-Math.PI / 2);
+  text(`${t("anode")} · ${L.anode}`, 0, 0, { size: 9, color: L.solid ? "#10161c" : "#cfd6de", base: "middle", font: FONT_M, weight: "600" });
+  ctx.restore();
+  ctx.save(); ctx.translate(W - ELECTRODE / 2 - 0.5, H / 2); ctx.rotate(Math.PI / 2);
+  text(`${t("cathode")} · ${L.cathode}`, 0, 0, { size: 9, color: "#f4f8ff", base: "middle", font: FONT_M, weight: "600" });
+  ctx.restore();
+}
+
+function drawMembranes() {
+  for (const m of mems) {
+    const g = m.gap * wide, top = m.c - g / 2, bot = m.c + g / 2;
+    const x = sxr(m.x, MEM_W);
+    const edge = m.moving ? "#ff8a5c" : "#f2b544";
+    for (const [y, h, lipY] of [[CASING - 4, top - CASING + 4, top], [bot, H - CASING - bot + 4, bot]]) {
+      if (h <= 2) continue;
+      ctx.fillStyle = m.moving ? "rgba(255,138,92,0.18)" : "rgba(242,181,68,0.2)";
+      rr(x, y, MEM_W, h, 6); ctx.fill();
+      ctx.save(); ctx.translate(x, 0); ctx.fillStyle = porePattern; rr(0, y, MEM_W, h, 6); ctx.fill(); ctx.restore();
+      ctx.strokeStyle = m.moving ? "#ff8a5c" : "rgba(242,181,68,0.7)"; ctx.lineWidth = 1.5;
+      rr(x + 0.75, y + 0.75, MEM_W - 1.5, h - 1.5, 6); ctx.stroke();
+      ctx.fillStyle = edge; rr(x - 3, lipY - 4, MEM_W + 6, 8, 4); ctx.fill();
+    }
+    if (top - 14 > CASING + 6) text(m.moving ? "SEI" : "PE", x + MEM_W / 2, top - 12, { size: 10, font: FONT_M, color: m.moving ? "#ffb190" : "rgba(242,181,68,0.85)", weight: "600" });
+    if (fx.fec > 0) { ctx.strokeStyle = "rgba(94,224,176,0.6)"; ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.strokeRect(x - 3, top, MEM_W + 6, bot - top); ctx.setLineDash([]); }
+  }
+}
+
+function drawDendrites() {
+  for (const d of dendrites) {
+    if (d.h < 1) continue;
+    const x = sxp(d.x);
+    const root = d.side > 0 ? H - CASING : CASING;
+    const tip = root - d.side * d.h;
+    ctx.fillStyle = "#c9d3dc";
+    ctx.beginPath(); ctx.moveTo(x - 12, root); ctx.lineTo(x, tip); ctx.lineTo(x + 12, root); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#c9d3dc"; ctx.lineWidth = 2.5; ctx.lineCap = "round";
+    for (const b of d.branches) {
+      const by = root - d.side * d.h * b.at;
+      const hw = 12 * (1 - b.at);
+      ctx.beginPath(); ctx.moveTo(x + b.side * hw * 0.5, by); ctx.lineTo(x + b.side * (hw + b.len * (1 - b.at)), by - d.side * b.len * 0.7); ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    ctx.fillStyle = "rgba(255,255,255,0.65)";
+    ctx.beginPath(); ctx.moveTo(x - 3, root); ctx.lineTo(x, tip + d.side * 6); ctx.lineTo(x - 0.5, root); ctx.closePath(); ctx.fill();
+  }
+}
+
+function drawBubbles() {
+  for (const b of bubbles) {
+    const x = sxp(b.x);
+    ctx.fillStyle = "rgba(200,230,255,0.08)"; ctx.beginPath(); ctx.arc(x, b.y, b.r, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(220,240,255,0.55)"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.beginPath(); ctx.arc(x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.18, 0, 7); ctx.fill();
+    text(b.co2 ? "CO₂" : "C₂H₄", x, b.y + 3.5, { size: 9, font: FONT_M, color: "rgba(220,240,255,0.75)", weight: "600" });
+  }
+}
+
+function drawItems() {
+  for (const it of items) {
+    const x = sxp(it.x), y = it.y + Math.sin(wtime * 4 + it.bob) * 6;
+    if (it.kind === "e") {
+      const g = ctx.createRadialGradient(x, y, 2, x, y, 14);
+      g.addColorStop(0, "rgba(127,227,255,0.55)"); g.addColorStop(1, "rgba(127,227,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 14, 0, 7); ctx.fill();
+      ctx.fillStyle = "#7fe3ff"; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill();
+      text("e⁻", x, y + 0.5, { size: 9, color: "#06202b", base: "middle", font: FONT_M });
+    } else {
+      const P = POWER[it.kind];
+      const g = ctx.createRadialGradient(x, y, 4, x, y, 24);
+      g.addColorStop(0, P.color + "88"); g.addColorStop(1, P.color + "00");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 24, 0, 7); ctx.fill();
+      ctx.fillStyle = P.color; hexPath(x, y, 13); ctx.fill();
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.2; hexPath(x, y, 13); ctx.stroke();
+      text(P.label, x, y + 0.5, { size: 9, color: "#0a1624", base: "middle" });
+    }
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) { ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  for (const f of floaters) { ctx.globalAlpha = clamp(f.life / 0.9, 0, 1); text(f.text, f.x, f.y, { size: 13, color: f.color }); }
+  ctx.globalAlpha = 1;
+}
+
+function drawIon() {
+  const x = ionSX, y = ion.y;
+  if (fx.inv > 0 && state === "play" && trans <= 0 && Math.floor(time * 16) % 2) return;
+  const tilt = state === "menu" ? 0 : clamp((ion.vy / 900) * dir(), -0.45, 0.8) * dir();
+  const sq = ion.squash * 0.18;
+  const halo = ctx.createRadialGradient(x, y, ION_R * 0.8, x, y, ION_R * 2.2);
+  halo.addColorStop(0, "rgba(255,77,166,0.55)"); halo.addColorStop(1, "rgba(255,77,166,0)");
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, ION_R * 2.2, 0, 7); ctx.fill();
+  if (fx.shield) {
+    ctx.strokeStyle = POWER.sei.color; ctx.lineWidth = 2.5;
+    ctx.globalAlpha = 0.7 + 0.3 * Math.sin(time * 6);
+    hexPath(x, y, ION_R + 7); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.scale(1 - sq, 1 + sq);
+  const g = ctx.createRadialGradient(-4, -5, 2, 0, 0, ION_R);
+  g.addColorStop(0, "#ffa3cf"); g.addColorStop(1, "#ff4da6");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, ION_R, 0, 7); ctx.fill();
+  text("Li⁺", 0, 1, { size: 11, color: "#fff", base: "middle" });
+  ctx.restore();
+}
+
+function drawHUD() {
+  const L = lvl(), x0 = ELECTRODE + 12;
+  text(String(score), x0, CASING + 38, { size: 30, align: "left" });
+  text(t("energy"), x0 + 1, CASING + 54, { size: 9, align: "left", color: "#8aa2b8", font: FONT_M, weight: "600" });
+  const soc = phase === "discharge" ? 1 - phaseCount / PER_PHASE : phaseCount / PER_PHASE;
+  const by = CASING + 64;
+  ctx.strokeStyle = "#e8f1f7"; ctx.lineWidth = 1.5; rr(x0, by, 64, 16, 3); ctx.stroke();
+  ctx.fillStyle = "#e8f1f7"; ctx.fillRect(x0 + 64, by + 5, 3, 6);
+  ctx.fillStyle = soc > 0.7 ? "#6fdc8c" : soc > 0.3 ? "#f2b544" : "#ff4da6";
+  ctx.fillRect(x0 + 3, by + 3, Math.max(0, 58 * soc), 10);
+  const arrow = phase === "discharge" ? "▶" : "◀";
+  text(`${phase === "discharge" ? t("discharge") : t("charge")} ${arrow} SOC ${Math.round(soc * 100)}%`, x0 + 74, by + 12, { size: 10, align: "left", font: FONT_M, color: "#e8f1f7", weight: "600" });
+  text(`${levelName(L)}${extra() ? " +" + extra() : ""} · ${L.volt.toFixed(1)} V`, x0, by + 32, { size: 10, align: "left", font: FONT_M, color: L.color, weight: "600" });
+
+  // potenciadores activos
+  let px = x0;
+  const py = by + 44;
+  const pills = [];
+  if (fx.fec > 0) pills.push(["fec", fx.fec / POWER.fec.dur]);
+  if (fx.slow > 0) pills.push(["slow", fx.slow / POWER.slow.dur]);
+  if (fx.shield) pills.push(["sei", 1]);
+  for (const [k, f] of pills) {
+    const P = POWER[k];
+    ctx.fillStyle = "rgba(0,0,0,0.35)"; rr(px, py, 46, 18, 9); ctx.fill();
+    ctx.fillStyle = P.color; rr(px, py, 46 * f, 18, 9); ctx.globalAlpha = 0.35; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = P.color; ctx.lineWidth = 1; rr(px, py, 46, 18, 9); ctx.stroke();
+    text(P.label, px + 23, py + 12.5, { size: 9, color: P.color });
+    px += 52;
+  }
+
+  // indicador de campo
+  const fy = H - CASING - 36, fxp = ELECTRODE + 22;
+  ctx.strokeStyle = "rgba(232,241,247,0.6)"; ctx.fillStyle = "rgba(232,241,247,0.6)"; ctx.lineWidth = 2;
+  const d = dir();
+  ctx.beginPath(); ctx.moveTo(fxp, fy - 10 * d); ctx.lineTo(fxp, fy + 10 * d); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(fxp - 5, fy + 5 * d); ctx.lineTo(fxp, fy + 12 * d); ctx.lineTo(fxp + 5, fy + 5 * d); ctx.fill();
+  text(t("field"), fxp + 10, fy + 4, { size: 9, align: "left", font: FONT_M, color: "rgba(232,241,247,0.6)", weight: "600" });
+
+  if (mode === "daily") text(t("dailyTag", { date: fmtDate(todayUTC()) }), W / 2, H - CASING - 10, { size: 9, font: FONT_M, color: "#f2b544", weight: "600" });
+
+  if (banner) {
+    ctx.globalAlpha = clamp(banner.t, 0, 1);
+    ctx.fillStyle = "rgba(5,12,20,0.6)"; rr(ELECTRODE + 20, H * 0.34 - 30, W - (ELECTRODE + 20) * 2, 56, 10); ctx.fill();
+    text(banner.title, W / 2, H * 0.34 - 4, { size: 18, color: "#f2b544" });
+    text(banner.sub, W / 2, H * 0.34 + 16, { size: 10, font: FONT_M, color: "#e8f1f7", weight: "500" });
+    ctx.globalAlpha = 1;
+  }
+}
+
+function draw() {
+  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  ctx.save();
+  if (shake > 0) ctx.translate(rand(-shake, shake) * 0.5, rand(-shake, shake) * 0.5);
+  drawBackground();
+  drawBubbles();
+  drawDendrites();
+  drawMembranes();
+  drawItems();
+  drawParticles();
+  if (state !== "dead" || time - deadAt < 2) drawIon();
+  drawElectrodes();
+  drawCasing();
+  ctx.restore();
+  if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 0.5})`; ctx.fillRect(0, 0, W, H); }
+  if (fx.slow > 0 && state === "play") { ctx.fillStyle = "rgba(255,224,102,0.05)"; ctx.fillRect(0, 0, W, H); }
+  if (state === "play" || state === "paused") drawHUD();
+}
+
+function loop(ts) {
+  if (!last) last = ts;
+  const dt = Math.min((ts - last) / 1000, 1 / 30);
+  last = ts;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ---------------- Pantallas (overlay) ----------------
+const ICONS = {
+  pause: '<svg viewBox="0 0 20 20" fill="currentColor"><rect x="4" y="3" width="4" height="14" rx="1"/><rect x="12" y="3" width="4" height="14" rx="1"/></svg>',
+  play: '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M5 3l12 7-12 7z"/></svg>',
+  sound: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h3l4-4v12l-4-4H3z" fill="currentColor" stroke="none"/><path d="M13 7a4 4 0 010 6M15.5 4.5a7.5 7.5 0 010 11"/></svg>',
+  mute: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h3l4-4v12l-4-4H3z" fill="currentColor" stroke="none"/><path d="M13 7l5 6M18 7l-5 6"/></svg>',
+};
+
+function updateChrome() {
+  document.documentElement.lang = lang;
+  langSel.value = lang;
+  document.getElementById("subtitle").textContent = t("subtitle");
+  document.getElementById("help").innerHTML = t("help");
+  btnPause.hidden = !(state === "play" || state === "paused");
+  btnPause.innerHTML = state === "paused" ? ICONS.play : ICONS.pause;
+  btnPause.setAttribute("aria-label", state === "paused" ? t("resume") : t("pause"));
+  btnMute.innerHTML = audio.muted ? ICONS.mute : ICONS.sound;
+}
+
+function medalFor(p) {
+  const m = t("medals");
+  if (p >= 80) return { name: m.platinum, color: "#cfe8ff" };
+  if (p >= 40) return { name: m.gold, color: "#f2c14e" };
+  if (p >= 20) return { name: m.silver, color: "#c3ccd6" };
+  if (p >= 10) return { name: m.bronze, color: "#d08a4f" };
   return null;
 }
 
-function createGame(canvas) {
-  const ctx = canvas.getContext("2d");
-  const audio = makeAudio();
-
-  let scale = 1;
-  let dpr = 1;
-  let state = "menu"; // menu | play | paused | dead
-  let time = 0;
-  let deadAt = 0;
-  let rafId = 0;
-  let last = 0;
-
-  let ion, mems, electrons, particles, speed, score, passed, collected;
-  let shake = 0;
-  let flash = 0;
-  let lastGapY = H / 2;
-  let spawnDist = 0;
-  let cycleBanner = 0;
-  let newRecord = false;
-
-  let record = Number(load(KEYS.record, 0)) || 0;
-  let history = load(KEYS.scores, []);
-  if (!Array.isArray(history)) history = [];
-
-  // Aniones PF6⁻ del electrolito (fondo con paralaje)
-  const anions = Array.from({ length: 22 }, () => ({
-    x: rand(0, W),
-    y: rand(CASING + 10, H - CASING - 10),
-    r: rand(3, 7),
-    depth: rand(0.15, 0.5),
-  }));
-
-  // Textura de poros de la membrana separadora (PE/PP)
-  const poreTile = document.createElement("canvas");
-  poreTile.width = 12;
-  poreTile.height = 12;
-  {
-    const p = poreTile.getContext("2d");
-    p.fillStyle = "rgba(242,181,68,0.35)";
-    p.beginPath();
-    p.arc(3, 3, 1.3, 0, Math.PI * 2);
-    p.arc(9, 9, 1.3, 0, Math.PI * 2);
-    p.fill();
-  }
-  const porePattern = ctx.createPattern(poreTile, "repeat");
-
-  function reset() {
-    ion = { y: H / 2, vy: 0, squash: 0 };
-    mems = [];
-    electrons = [];
-    particles = [];
-    speed = 150;
-    score = 0;
-    passed = 0;
-    collected = 0;
-    shake = 0;
-    flash = 0;
-    lastGapY = H / 2;
-    spawnDist = SPACING - 90;
-    cycleBanner = 0;
-    newRecord = false;
-  }
-  reset();
-
-  // ---------- Tamaño y escalado (nítido en pantallas retina) ----------
-  function resize() {
-    const parent = canvas.parentElement;
-    if (!parent) return;
-    const availW = parent.clientWidth;
-    const availH = parent.clientHeight || window.innerHeight;
-    scale = Math.max(0.4, Math.min(availW / W, availH / H));
-    dpr = Math.min(window.devicePixelRatio || 1, 3);
-    canvas.style.width = `${Math.floor(W * scale)}px`;
-    canvas.style.height = `${Math.floor(H * scale)}px`;
-    canvas.width = Math.floor(W * scale * dpr);
-    canvas.height = Math.floor(H * scale * dpr);
-  }
-  const ro = new ResizeObserver(resize);
-  if (canvas.parentElement) ro.observe(canvas.parentElement);
-  resize();
-
-  // ---------- Lógica ----------
-  function spawn() {
-    const gap = Math.max(128, 176 - passed * 1.3);
-    const minC = CASING + gap / 2 + 24;
-    const maxC = H - CASING - gap / 2 - 24;
-    // El hueco nuevo no se aleja demasiado del anterior: siempre es alcanzable
-    const c = clamp(lastGapY + rand(-170, 170), minC, maxC);
-    lastGapY = c;
-    const moving = passed >= 12 && Math.random() < Math.min(0.55, (passed - 11) * 0.04);
-    mems.push({
-      x: W,
-      c,
-      base: c,
-      gap,
-      minC,
-      maxC,
-      moving,
-      amp: moving ? rand(28, 55) : 0,
-      phase: rand(0, Math.PI * 2),
-      counted: false,
-    });
-    if (Math.random() < 0.5) {
-      electrons.push({
-        x: W + MEM_W + SPACING / 2 - 10,
-        y: clamp(c + rand(-70, 70), CASING + 30, H - CASING - 30),
-        bob: rand(0, Math.PI * 2),
-      });
-    }
-  }
-
-  function burst(x, y, n, color, spd = 180) {
-    for (let i = 0; i < n; i++) {
-      const a = rand(0, Math.PI * 2);
-      const s = rand(spd * 0.3, spd);
-      particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.4, 0.9), max: 0.9, r: rand(1.5, 3.5), color });
-    }
-  }
-
-  function flap() {
-    ion.vy = JUMP;
-    ion.squash = 1;
-    audio.flap();
-  }
-
-  function start() {
-    reset();
-    state = "play";
-    flap();
-  }
-
-  function die() {
-    if (state !== "play") return;
-    state = "dead";
-    deadAt = time;
-    shake = 14;
-    flash = 1;
-    burst(ION_X, ion.y, 36, C.ion, 260);
-    audio.die();
-    history.unshift(score);
-    if (history.length > 10) history.length = 10;
-    store(KEYS.scores, history);
-    if (score > record) {
-      record = score;
-      newRecord = score > 0;
-      store(KEYS.record, record);
-    }
-  }
-
-  function circleRect(cx, cy, r, rx, ry, rw, rh) {
-    const nx = clamp(cx, rx, rx + rw);
-    const ny = clamp(cy, ry, ry + rh);
-    const dx = cx - nx;
-    const dy = cy - ny;
-    return dx * dx + dy * dy < r * r;
-  }
-
-  function update(dt) {
-    time += dt;
-    const drift = state === "play" ? speed : 45;
-    if (state !== "paused") {
-      for (const a of anions) {
-        a.x -= drift * a.depth * dt;
-        if (a.x < -10) {
-          a.x = W + 10;
-          a.y = rand(CASING + 10, H - CASING - 10);
-        }
-      }
-    }
-
-    // partículas (siguen animándose tras morir)
-    if (state !== "paused") {
-      for (const p of particles) {
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.vy += 300 * dt;
-        p.life -= dt;
-      }
-      particles = particles.filter((p) => p.life > 0);
-      shake = Math.max(0, shake - 40 * dt);
-      flash = Math.max(0, flash - 2.5 * dt);
-      cycleBanner = Math.max(0, cycleBanner - dt);
-    }
-
-    if (state === "menu") {
-      ion.y = H / 2 - 42 + Math.sin(time * 2.4) * 10;
-      return;
-    }
-    if (state === "dead") {
-      // el ion cae al fondo tras el impacto
-      if (ion.y + ION_R < H - CASING) {
-        ion.vy = Math.min(ion.vy + G * dt, MAX_FALL);
-        ion.y = Math.min(ion.y + ion.vy * dt, H - CASING - ION_R);
-      }
-      return;
-    }
-    if (state !== "play") return;
-
-    ion.vy = Math.min(ion.vy + G * dt, MAX_FALL);
-    ion.y += ion.vy * dt;
-    ion.squash = Math.max(0, ion.squash - 5 * dt);
-
-    // estela
-    if (Math.random() < 0.8) {
-      particles.push({ x: ION_X - ION_R * 0.6, y: ion.y + rand(-4, 4), vx: -speed * 0.6, vy: rand(-15, 15), life: 0.35, max: 0.35, r: rand(1.5, 3), color: C.ionLight, noGrav: true });
-    }
-
-    spawnDist += speed * dt;
-    if (spawnDist >= SPACING) {
-      spawnDist -= SPACING;
-      spawn();
-    }
-
-    for (const m of mems) {
-      m.x -= speed * dt;
-      if (m.moving) m.c = clamp(m.base + Math.sin(time * 1.7 + m.phase) * m.amp, m.minC, m.maxC);
-    }
-    while (mems.length && mems[0].x + MEM_W < -10) mems.shift();
-
-    for (const e of electrons) e.x -= speed * dt;
-    electrons = electrons.filter((e) => !e.taken && e.x > -20);
-
-    if (ion.y - HIT_R < CASING || ion.y + HIT_R > H - CASING) {
-      ion.y = clamp(ion.y, CASING + ION_R, H - CASING - ION_R);
-      die();
-      return;
-    }
-
-    for (const m of mems) {
-      const top = m.c - m.gap / 2;
-      const bot = m.c + m.gap / 2;
-      if (
-        circleRect(ION_X, ion.y, HIT_R, m.x, 0, MEM_W, top) ||
-        circleRect(ION_X, ion.y, HIT_R, m.x, bot, MEM_W, H - bot)
-      ) {
-        die();
-        return;
-      }
-      if (!m.counted && m.x + MEM_W < ION_X - ION_R) {
-        m.counted = true;
-        passed++;
-        score += 10;
-        speed = Math.min(speed + 3.5, 275);
-        if (passed % MEMBRANES_PER_CYCLE === 0) {
-          cycleBanner = 1.6;
-          audio.cycle();
-          burst(ION_X, ion.y, 20, C.gold, 200);
-        } else {
-          audio.score();
-        }
-      }
-    }
-
-    for (const e of electrons) {
-      const y = e.y + Math.sin(time * 4 + e.bob) * 6;
-      const dx = e.x - ION_X;
-      const dy = y - ion.y;
-      if (dx * dx + dy * dy < (ION_R + 10) ** 2) {
-        e.taken = true;
-        score += 5;
-        collected++;
-        audio.electron();
-        burst(e.x, y, 10, C.electron, 140);
-      }
-    }
-  }
-
-  // ---------- Dibujo ----------
-  function text(str, x, y, { size = 16, font = FONT_DISPLAY, color = C.text, align = "center", weight = "700", base = "alphabetic" } = {}) {
-    ctx.font = `${weight} ${size}px ${font}`;
-    ctx.fillStyle = color;
-    ctx.textAlign = align;
-    ctx.textBaseline = base;
-    ctx.fillText(str, x, y);
-  }
-
-  function rr(x, y, w, h, r) {
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
-    else ctx.rect(x, y, w, h);
-  }
-
-  function drawBackground() {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, C.electrolyte1);
-    g.addColorStop(1, C.electrolyte0);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.strokeStyle = C.anion;
-    ctx.lineWidth = 1.2;
-    for (const a of anions) {
-      ctx.beginPath();
-      ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(a.x - a.r * 0.45, a.y);
-      ctx.lineTo(a.x + a.r * 0.45, a.y);
-      ctx.stroke();
-    }
-  }
-
-  function drawCasing() {
-    for (const [y0, h] of [[0, CASING], [H - CASING, CASING]]) {
-      ctx.fillStyle = C.casing;
-      ctx.fillRect(0, y0, W, h);
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, y0, W, h);
-      ctx.clip();
-      ctx.strokeStyle = C.casingLine;
-      ctx.lineWidth = 2;
-      const off = state === "play" ? (time * speed) % 14 : (time * 45) % 14;
-      for (let x = -h - off; x < W + h; x += 14) {
-        ctx.beginPath();
-        ctx.moveTo(x, y0 + h);
-        ctx.lineTo(x + h, y0);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-    ctx.fillStyle = "rgba(255,255,255,0.08)";
-    ctx.fillRect(0, CASING - 1, W, 1);
-    ctx.fillRect(0, H - CASING, W, 1);
-  }
-
-  function drawElectrodes() {
-    // Ánodo de grafito (capas) a la izquierda
-    ctx.fillStyle = C.anode;
-    ctx.fillRect(0, CASING, ELECTRODE, H - CASING * 2);
-    ctx.strokeStyle = C.anodeLine;
-    ctx.lineWidth = 1;
-    for (let y = CASING + 4; y < H - CASING; y += 6) {
-      ctx.beginPath();
-      ctx.moveTo(2, y);
-      ctx.lineTo(ELECTRODE - 2, y);
-      ctx.stroke();
-    }
-    // Cátodo de LiCoO₂ a la derecha
-    ctx.fillStyle = C.cathode;
-    ctx.fillRect(W - ELECTRODE, CASING, ELECTRODE, H - CASING * 2);
-    ctx.fillStyle = C.cathodeLine;
-    for (let y = CASING + 5; y < H - CASING; y += 9) {
-      ctx.beginPath();
-      ctx.arc(W - ELECTRODE / 2, y, 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.save();
-    ctx.translate(ELECTRODE / 2 + 0.5, H / 2);
-    ctx.rotate(-Math.PI / 2);
-    text("ÁNODO · C₆", 0, 0, { size: 9, color: "#cfd6de", base: "middle", font: FONT_MONO, weight: "600" });
-    ctx.restore();
-    ctx.save();
-    ctx.translate(W - ELECTRODE / 2 - 0.5, H / 2);
-    ctx.rotate(Math.PI / 2);
-    text("CÁTODO · LiCoO₂", 0, 0, { size: 9, color: "#dbe9ff", base: "middle", font: FONT_MONO, weight: "600" });
-    ctx.restore();
-  }
-
-  function drawMembranes() {
-    for (const m of mems) {
-      const top = m.c - m.gap / 2;
-      const bot = m.c + m.gap / 2;
-      for (const [y, h, lipY] of [[CASING - 4, top - CASING + 4, top], [bot, H - CASING - bot + 4, bot]]) {
-        ctx.fillStyle = C.membrane;
-        rr(m.x, y, MEM_W, h, 6);
-        ctx.fill();
-        ctx.save();
-        ctx.translate(m.x, 0);
-        ctx.fillStyle = porePattern;
-        rr(0, y, MEM_W, h, 6);
-        ctx.fill();
-        ctx.restore();
-        ctx.strokeStyle = m.moving ? "#ff8a5c" : "rgba(242,181,68,0.7)";
-        ctx.lineWidth = 1.5;
-        rr(m.x + 0.75, y + 0.75, MEM_W - 1.5, h - 1.5, 6);
-        ctx.stroke();
-        // labio del poro
-        ctx.fillStyle = m.moving ? "#ff8a5c" : C.membraneEdge;
-        rr(m.x - 3, lipY - 4, MEM_W + 6, 8, 4);
-        ctx.fill();
-      }
-      text(m.moving ? "SEI" : "PE", m.x + MEM_W / 2, top - 14, { size: 10, font: FONT_MONO, color: m.moving ? "#ffb190" : "rgba(242,181,68,0.85)", weight: "600" });
-    }
-  }
-
-  function drawElectrons() {
-    for (const e of electrons) {
-      const y = e.y + Math.sin(time * 4 + e.bob) * 6;
-      const g = ctx.createRadialGradient(e.x, y, 2, e.x, y, 14);
-      g.addColorStop(0, "rgba(127,227,255,0.55)");
-      g.addColorStop(1, "rgba(127,227,255,0)");
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(e.x, y, 14, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = C.electron;
-      ctx.beginPath();
-      ctx.arc(e.x, y, 7, 0, Math.PI * 2);
-      ctx.fill();
-      text("e⁻", e.x, y + 0.5, { size: 9, color: "#06202b", base: "middle", font: FONT_MONO });
-    }
-  }
-
-  function drawParticles() {
-    for (const p of particles) {
-      ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawIon() {
-    const x = ION_X;
-    const y = ion.y;
-    const tilt = state === "play" || state === "dead" ? clamp(ion.vy / 900, -0.45, 0.8) : 0;
-    const sq = ion.squash * 0.18;
-
-    const halo = ctx.createRadialGradient(x, y, ION_R * 0.8, x, y, ION_R * 2.2);
-    halo.addColorStop(0, "rgba(255,77,166,0.55)");
-    halo.addColorStop(1, "rgba(255,77,166,0)");
-    ctx.fillStyle = halo;
-    ctx.beginPath();
-    ctx.arc(x, y, ION_R * 2.2, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(tilt);
-    ctx.scale(1 - sq, 1 + sq);
-    const g = ctx.createRadialGradient(-4, -5, 2, 0, 0, ION_R);
-    g.addColorStop(0, C.ionLight);
-    g.addColorStop(1, C.ion);
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(0, 0, ION_R, 0, Math.PI * 2);
-    ctx.fill();
-    text("Li⁺", 0, 1, { size: 11, color: "#ffffff", base: "middle" });
-    ctx.restore();
-  }
-
-  // botones del HUD (coordenadas lógicas)
-  const BTN = {
-    mute: { x: W - ELECTRODE - 38, y: CASING + 8, w: 30, h: 30 },
-    pause: { x: W - ELECTRODE - 74, y: CASING + 8, w: 30, h: 30 },
-  };
-
-  function drawButtons() {
-    for (const [k, b] of Object.entries(BTN)) {
-      if (k === "pause" && state !== "play" && state !== "paused") continue;
-      ctx.fillStyle = "rgba(255,255,255,0.08)";
-      rr(b.x, b.y, b.w, b.h, 8);
-      ctx.fill();
-      ctx.strokeStyle = C.text;
-      ctx.fillStyle = C.text;
-      ctx.lineWidth = 2;
-      const cx = b.x + b.w / 2;
-      const cy = b.y + b.h / 2;
-      if (k === "pause") {
-        if (state === "paused") {
-          ctx.beginPath();
-          ctx.moveTo(cx - 4, cy - 7);
-          ctx.lineTo(cx + 7, cy);
-          ctx.lineTo(cx - 4, cy + 7);
-          ctx.closePath();
-          ctx.fill();
-        } else {
-          ctx.fillRect(cx - 6, cy - 7, 4, 14);
-          ctx.fillRect(cx + 2, cy - 7, 4, 14);
-        }
-      } else {
-        ctx.beginPath();
-        ctx.moveTo(cx - 9, cy - 3);
-        ctx.lineTo(cx - 5, cy - 3);
-        ctx.lineTo(cx, cy - 8);
-        ctx.lineTo(cx, cy + 8);
-        ctx.lineTo(cx - 5, cy + 3);
-        ctx.lineTo(cx - 9, cy + 3);
-        ctx.closePath();
-        ctx.fill();
-        if (audio.muted) {
-          ctx.beginPath();
-          ctx.moveTo(cx + 3, cy - 5);
-          ctx.lineTo(cx + 10, cy + 5);
-          ctx.moveTo(cx + 10, cy - 5);
-          ctx.lineTo(cx + 3, cy + 5);
-          ctx.stroke();
-        } else {
-          ctx.beginPath();
-          ctx.arc(cx + 1, cy, 5, -0.9, 0.9);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.arc(cx + 1, cy, 9, -0.9, 0.9);
-          ctx.stroke();
-        }
-      }
-    }
-  }
-
-  function drawHUD() {
-    const x0 = ELECTRODE + 12;
-    text(String(score), x0, CASING + 38, { size: 30, align: "left" });
-    text("ENERGÍA", x0 + 1, CASING + 54, { size: 9, align: "left", color: C.textDim, font: FONT_MONO, weight: "600" });
-
-    // Batería: estado de carga del ciclo actual
-    const soc = (passed % MEMBRANES_PER_CYCLE) / MEMBRANES_PER_CYCLE;
-    const cycle = Math.floor(passed / MEMBRANES_PER_CYCLE) + 1;
-    const bx = x0;
-    const by = CASING + 64;
-    ctx.strokeStyle = C.text;
-    ctx.lineWidth = 1.5;
-    rr(bx, by, 64, 16, 3);
-    ctx.stroke();
-    ctx.fillStyle = C.text;
-    ctx.fillRect(bx + 64, by + 5, 3, 6);
-    ctx.fillStyle = soc > 0.7 ? "#6fdc8c" : soc > 0.3 ? C.gold : C.ion;
-    ctx.fillRect(bx + 3, by + 3, Math.max(0, 58 * soc), 10);
-    text(`SOC ${Math.round(soc * 100)}% · ciclo ${cycle}`, bx + 74, by + 12, { size: 10, align: "left", font: FONT_MONO, color: C.textDim, weight: "600" });
-
-    if (cycleBanner > 0) {
-      ctx.globalAlpha = clamp(cycleBanner, 0, 1);
-      text(`¡Ciclo ${cycle - 1} completado!`, W / 2, H * 0.32, { size: 18, color: C.gold });
-      text("+100% carga", W / 2, H * 0.32 + 20, { size: 11, font: FONT_MONO, color: C.text, weight: "600" });
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  function panel(y, h) {
-    ctx.fillStyle = C.panel;
-    rr(ELECTRODE + 18, y, W - (ELECTRODE + 18) * 2, h, 14);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-
-  function drawMenu() {
-    ctx.fillStyle = "rgba(5,12,20,0.35)";
-    ctx.fillRect(0, 0, W, H);
-    text("FLAPPY", W / 2, 120, { size: 40 });
-    text("Li⁺", W / 2, 172, { size: 48, color: C.ion });
-    text("Lleva el ion de litio del ánodo al cátodo", W / 2, 204, { size: 12, font: FONT_MONO, color: C.textDim, weight: "500" });
-    text("atravesando los poros del separador.", W / 2, 221, { size: 12, font: FONT_MONO, color: C.textDim, weight: "500" });
-
-    panel(360, 170);
-    const rows = [
-      ["Impulsar", "Espacio · ↑ · clic · toque"],
-      ["Pausa", "P · Esc"],
-      ["Sonido", "M"],
-      ["Poro superado", "+10"],
-      ["Electrón e⁻", "+5"],
-      ["Membrana SEI", "se mueve"],
-    ];
-    rows.forEach(([a, b], i) => {
-      text(a, ELECTRODE + 36, 388 + i * 23, { size: 11, align: "left", font: FONT_MONO, color: C.textDim, weight: "500" });
-      text(b, W - ELECTRODE - 36, 388 + i * 23, { size: 11, align: "right", font: FONT_MONO, weight: "600" });
-    });
-
-    const pulse = 0.55 + 0.45 * Math.sin(time * 4);
-    ctx.globalAlpha = pulse;
-    text("Toca o pulsa ESPACIO para empezar", W / 2, 322, { size: 13 });
-    ctx.globalAlpha = 1;
-    if (record > 0) text(`Récord: ${record}`, W / 2, 556, { size: 12, font: FONT_MONO, color: C.gold, weight: "600" });
-  }
-
-  function drawPaused() {
-    ctx.fillStyle = "rgba(5,12,20,0.6)";
-    ctx.fillRect(0, 0, W, H);
-    text("PAUSA", W / 2, H / 2 - 6, { size: 30 });
-    text("Toca o pulsa P para seguir", W / 2, H / 2 + 22, { size: 12, font: FONT_MONO, color: C.textDim, weight: "500" });
-  }
-
-  function drawDead() {
-    const k = clamp((time - deadAt) / 0.35, 0, 1);
-    ctx.fillStyle = `rgba(5,12,20,${0.55 * k})`;
-    ctx.fillRect(0, 0, W, H);
-    if (k < 1) return;
-
-    panel(96, 408);
-    text("ION ATRAPADO", W / 2, 140, { size: 22, color: C.ion });
-    text(`${passed} poros · ${collected} e⁻`, W / 2, 162, { size: 11, font: FONT_MONO, color: C.textDim, weight: "500" });
-
-    text(String(score), W / 2 - 70, 218, { size: 34 });
-    text("ENERGÍA", W / 2 - 70, 236, { size: 9, font: FONT_MONO, color: C.textDim, weight: "600" });
-    text(String(record), W / 2 + 70, 218, { size: 34, color: C.gold });
-    text("RÉCORD", W / 2 + 70, 236, { size: 9, font: FONT_MONO, color: C.textDim, weight: "600" });
-
-    if (newRecord) {
-      ctx.fillStyle = C.gold;
-      rr(W / 2 - 58, 250, 116, 20, 10);
-      ctx.fill();
-      text("¡NUEVO RÉCORD!", W / 2, 264, { size: 10, color: "#1a1204" });
-    }
-    const medal = medalFor(passed);
-    if (medal) {
-      ctx.fillStyle = medal.color;
-      ctx.beginPath();
-      ctx.arc(W / 2 - 46, 292, 7, 0, Math.PI * 2);
-      ctx.fill();
-      text(`Medalla ${medal.name}`, W / 2 - 32, 296, { size: 11, align: "left", font: FONT_MONO, weight: "600" });
-    }
-
-    // Últimas partidas como barras
-    text("ÚLTIMAS 10 PARTIDAS", ELECTRODE + 40, 330, { size: 9, align: "left", font: FONT_MONO, color: C.textDim, weight: "600" });
-    const maxS = Math.max(10, ...history);
-    const bw = (W - (ELECTRODE + 40) * 2) / 10;
-    history.forEach((s, i) => {
-      const h = Math.max(2, (s / maxS) * 80);
-      const x = ELECTRODE + 40 + i * bw;
-      ctx.fillStyle = i === 0 ? C.ion : "rgba(232,241,247,0.35)";
-      rr(x + 3, 430 - h, bw - 6, h, 3);
-      ctx.fill();
-      text(String(s), x + bw / 2, 446, { size: 9, font: FONT_MONO, color: i === 0 ? C.text : C.textDim, weight: "500" });
-    });
-
-    if (time - deadAt > 0.6) {
-      const pulse = 0.55 + 0.45 * Math.sin(time * 4);
-      ctx.globalAlpha = pulse;
-      text("Toca o pulsa ESPACIO para reintentar", W / 2, 482, { size: 12 });
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  function draw() {
-    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
-    ctx.save();
-    if (shake > 0) ctx.translate(rand(-shake, shake) * 0.5, rand(-shake, shake) * 0.5);
-    drawBackground();
-    drawMembranes();
-    drawElectrons();
-    drawParticles();
-    if (state !== "dead" || time - deadAt < 2) drawIon();
-    drawElectrodes();
-    drawCasing();
-    ctx.restore();
-
-    if (flash > 0) {
-      ctx.fillStyle = `rgba(255,255,255,${flash * 0.5})`;
-      ctx.fillRect(0, 0, W, H);
-    }
-    if (state === "play" || state === "paused") drawHUD();
-    if (state === "menu") drawMenu();
-    if (state === "paused") drawPaused();
-    if (state === "dead") drawDead();
-    drawButtons();
-  }
-
-  function loop(t) {
-    if (!last) last = t;
-    const dt = Math.min((t - last) / 1000, 1 / 30);
-    last = t;
-    update(dt);
-    draw();
-    rafId = requestAnimationFrame(loop);
-  }
-
-  // ---------- Entrada ----------
-  function press() {
-    audio.ensure();
-    if (state === "menu") start();
-    else if (state === "play") flap();
-    else if (state === "paused") state = "play";
-    else if (state === "dead" && time - deadAt > 0.6) start();
-  }
-  function togglePause() {
-    if (state === "play") state = "paused";
-    else if (state === "paused") state = "play";
-  }
-  const inBtn = (b, x, y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
-
-  function onPointer(e) {
-    e.preventDefault();
-    const r = canvas.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width) * W;
-    const y = ((e.clientY - r.top) / r.height) * H;
-    if (inBtn(BTN.mute, x, y)) {
-      audio.ensure();
-      audio.toggle();
-      return;
-    }
-    if ((state === "play" || state === "paused") && inBtn(BTN.pause, x, y)) {
-      togglePause();
-      return;
-    }
-    press();
-  }
-  function onKey(e) {
-    if (["Space", "ArrowUp", "KeyW", "Enter"].includes(e.code)) {
-      e.preventDefault();
-      if (!e.repeat) press();
-    } else if (e.code === "KeyP" || e.code === "Escape") {
-      togglePause();
-    } else if (e.code === "KeyM") {
-      audio.ensure();
-      audio.toggle();
-    }
-  }
-  function onHide() {
-    if (state === "play") state = "paused";
-  }
-  function onVisibility() {
-    if (document.hidden) onHide();
-    last = 0;
-  }
-
-  canvas.addEventListener("pointerdown", onPointer);
-  window.addEventListener("keydown", onKey);
-  window.addEventListener("blur", onHide);
-  document.addEventListener("visibilitychange", onVisibility);
-  if (document.fonts && document.fonts.load) {
-    document.fonts.load(`700 16px ${FONT_DISPLAY}`).catch(() => {});
-    document.fonts.load(`600 16px ${FONT_MONO}`).catch(() => {});
-  }
-  rafId = requestAnimationFrame(loop);
-
-  return {
-    destroy() {
-      cancelAnimationFrame(rafId);
-      ro.disconnect();
-      canvas.removeEventListener("pointerdown", onPointer);
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("blur", onHide);
-      document.removeEventListener("visibilitychange", onVisibility);
-    },
-  };
+function routeHTML() {
+  return LEVELS.map((L, i) => `<span class="chip${i <= maxLevel ? " on" : ""}" style="color:${L.color}">${esc(levelName(L))}</span>`).join('<span class="arrow">→</span>');
 }
-createGame(document.getElementById("game"));
+
+function menuHTML() {
+  const db = dailyBest();
+  return `
+    <div class="logo"><span>FLAPPY</span><b>Li⁺</b></div>
+    <p class="tag">${esc(t("tagline"))}</p>
+    <div class="stack">
+      <button class="btn primary" data-a="play">${esc(t("play"))}</button>
+      <button class="btn" data-a="daily">${esc(t("daily"))}<small>${esc(t("dailySub", { date: fmtDate(todayUTC()) }))}${db ? " · " + esc(t("dailyBest")) + ": " + db : ""}</small></button>
+    </div>
+    <div class="row">
+      <button class="btn small" data-a="games">${esc(t("myGames"))}</button>
+      <button class="btn small" data-a="howto">${esc(t("howto"))}</button>
+      <button class="btn small" data-a="science">${esc(t("science"))}</button>
+    </div>
+    <label class="toggle"><input type="checkbox" id="teacher"${teacher ? " checked" : ""}><span>${esc(t("teacher"))}<small>${esc(t("teacherHint"))}</small></span></label>
+    <div class="route">${routeHTML()}</div>
+    ${record > 0 ? `<p class="rec">${esc(t("record"))}: ${record}</p>` : ""}`;
+}
+
+function overHTML() {
+  const r = lastRun;
+  const causeKey = { membrane: "causeMembrane", dendrite: "causeDendrite", casing: "causeCasing" }[r.cause];
+  const medal = medalFor(r.pores);
+  const best = r.mode === "daily" ? dailyBest() : record;
+  const phaseName = r.phase === "discharge" ? t("discharge") : t("charge");
+  return `
+    <h2 style="color:var(--ion)">${esc(t(causeKey))}</h2>
+    <p class="muted">${r.mode === "daily" ? esc(t("daily")) + " " + fmtDate(r.date) + " · " : ""}${esc(t("levelN", { n: r.levelIdx + 1 }))} · ${esc(levelName(r.level))} · ${esc(phaseName)}</p>
+    <div class="scores"><div><b>${r.score}</b><span>${esc(t("energy"))}</span></div><div><b class="gold">${best}</b><span>${esc(r.mode === "daily" ? t("dailyBest").toUpperCase() : t("best"))}</span></div></div>
+    ${r.isNew || medal ? `<div class="badges">${r.isNew ? `<span class="badge">${esc(t("newRecord"))}</span>` : ""}${medal ? `<span class="badge medal" style="color:${medal.color}">${esc(t("medal", { m: medal.name }))}</span>` : ""}</div>` : ""}
+    <p class="stats">${r.pores} ${esc(t("pores"))} · ${r.cycles} ${esc(t("cycles"))} · ${r.collected} ${esc(t("electrons"))}</p>
+    <div class="fact"><h3>${esc(t("didYouKnow"))}</h3><p>${esc(FACTS[currentFact][lang])}</p></div>
+    <button class="btn primary" data-a="retry">${esc(t("retry"))}</button>
+    <div class="row">
+      <button class="btn small" data-a="share">${esc(t("share"))}</button>
+      <button class="btn small" data-a="image">${esc(t("image"))}</button>
+      <button class="btn small" data-a="science">${esc(t("seeScience"))}</button>
+    </div>
+    <div class="row">
+      <button class="btn small" data-a="games">${esc(t("myGames"))}</button>
+      <button class="btn small" data-a="menu">${esc(t("menu"))}</button>
+    </div>
+    <p class="hint">${esc(t("spaceRetry"))}</p>`;
+}
+
+function howtoHTML() {
+  const icon = (k) => {
+    if (k === "pore") return '<span class="ico" style="background:#f2b544;border-radius:4px">PE</span>';
+    if (k === "e") return '<span class="ico" style="background:#7fe3ff">e⁻</span>';
+    if (POWER[k]) return `<span class="ico hex" style="background:${POWER[k].color}">${POWER[k].label}</span>`;
+    if (k === "dendrite") return '<span class="ico" style="background:#c9d3dc;clip-path:polygon(50% 0,100% 100%,0 100%);border-radius:0"></span>';
+    if (k === "bubble") return '<span class="ico" style="background:transparent;border:1.5px solid #dcf0ff;color:#dcf0ff">CO₂</span>';
+    return '<span class="ico" style="background:#ff8a5c;border-radius:4px">SEI</span>';
+  };
+  return `
+    <h2>${esc(t("howtoTitle"))}</h2>
+    <p>${esc(t("howtoControls"))}</p>
+    <p class="muted">${esc(t("howtoPhases"))}</p>
+    <div class="legend">${t("legend").map(([k, s]) => `${icon(k)}<span>${esc(s)}</span>`).join("")}</div>
+    <p class="muted">${esc(t("medalsLine"))}</p>
+    <button class="btn" data-a="back">${esc(t("back"))}</button>`;
+}
+
+function gamesHTML() {
+  const db = dailyBest();
+  const maxS = Math.max(10, ...history);
+  const rows = history.map((v, i) => `<li${i === 0 ? ' class="me"' : ""}><span>${i + 1}</span><b><i class="bar" style="width:${Math.max(2, (v / maxS) * 100)}%"></i></b><em>${v}</em></li>`).join("");
+  return `
+    <h2>${esc(t("myGames"))}</h2>
+    <div class="scores"><div><b class="gold">${record}</b><span>${esc(t("best"))}</span></div><div><b>${db}</b><span>${esc(t("dailyBest").toUpperCase())}</span></div></div>
+    <h3>${esc(t("lastGames"))}</h3>
+    ${history.length ? `<ol class="rank">${rows}</ol>` : `<p class="muted">${esc(t("localEmpty"))}</p>`}
+    <p class="muted">${esc(t("localNote"))}</p>
+    <button class="btn" data-a="back">${esc(t("back"))}</button>`;
+}
+
+function diagramSVG(L) {
+  const solid = !!L.solid;
+  const layers = Array.from({ length: 15 }, (_, i) => `<line x1="20" x2="86" y1="${46 + i * 9}" y2="${46 + i * 9}" stroke="#4a525c" stroke-width="1"/>`).join("");
+  const dots = Array.from({ length: 36 }, (_, i) => `<circle cx="${280 + (i % 6) * 10 + (Math.floor(i / 6) % 2) * 5}" cy="${50 + Math.floor(i / 6) * 22}" r="2.6" fill="${L.color}"/>`).join("");
+  const pores = Array.from({ length: 16 }, (_, i) => `<rect x="177" y="${44 + i * 8.6}" width="6" height="3" fill="${solid ? "#e8c9a0" : "#0a1624"}"/>`).join("");
+  const ionAt = (x, y) => `<circle cx="${x}" cy="${y}" r="7" fill="#ff4da6"/><text x="${x}" y="${y + 2.6}" font-size="6.5" fill="#fff" text-anchor="middle" font-weight="700">Li⁺</text>`;
+  return `<svg class="diagram" viewBox="0 0 360 250" role="img" aria-label="${esc(t("sciTitle"))}" font-family="IBM Plex Mono, monospace">
+    <path d="M14 40 V14 H346 V40" fill="none" stroke="#7fe3ff" stroke-width="1.5"/>
+    <rect x="148" y="6" width="64" height="16" rx="4" fill="#0d1a28" stroke="#7fe3ff"/>
+    <text x="180" y="17.5" font-size="8" fill="#7fe3ff" text-anchor="middle">${esc(t("sciCircuit"))}</text>
+    <rect x="88" y="40" width="184" height="150" fill="${solid ? "#2a2320" : "rgba(58,123,213,0.14)"}"/>
+    <rect x="10" y="40" width="8" height="150" fill="#c47a4a"/>
+    <rect x="18" y="40" width="70" height="150" fill="${solid ? "#8d99a6" : "#2b2f35"}"/>
+    ${solid ? "" : layers}
+    <rect x="176" y="40" width="8" height="150" fill="#f2b544" opacity="0.85"/>
+    ${pores}
+    <rect x="272" y="40" width="70" height="150" fill="${L.dark}"/>
+    ${dots}
+    <rect x="342" y="40" width="8" height="150" fill="#aeb8c2"/>
+    <text x="14" y="36" font-size="8" fill="#e8f1f7" text-anchor="middle">Cu</text>
+    <text x="346" y="36" font-size="8" fill="#e8f1f7" text-anchor="middle">Al</text>
+    <line x1="60" y1="84" x2="300" y2="84" stroke="#ff4da6" stroke-width="1.5" marker-end="url(#ah)"/>
+    ${ionAt(130, 84)}
+    <text x="232" y="78" font-size="8.5" fill="#ff4da6" text-anchor="middle">${esc(t("sciDischarge"))} →</text>
+    <line x1="300" y1="146" x2="60" y2="146" stroke="#ffa3cf" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ah2)"/>
+    ${ionAt(230, 146)}
+    <text x="128" y="140" font-size="8.5" fill="#ffa3cf" text-anchor="middle">← ${esc(t("sciCharge"))}</text>
+    <defs>
+      <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff4da6"/></marker>
+      <marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ffa3cf"/></marker>
+    </defs>
+    <text x="53" y="204" font-size="8.5" fill="#e8f1f7" text-anchor="middle" font-weight="600">${esc(t("sciAnode"))}</text>
+    <text x="53" y="215" font-size="7.5" fill="#8aa2b8" text-anchor="middle">${esc(solid ? t("sciLiMetal") : t("sciGraphite"))} (${esc(L.anode)})</text>
+    <text x="180" y="204" font-size="8.5" fill="#e8f1f7" text-anchor="middle" font-weight="600">${esc(t("sciSeparator"))} · ${esc(t("sciElectrolyte"))}</text>
+    <text x="180" y="215" font-size="7.5" fill="#8aa2b8" text-anchor="middle">${esc(solid ? t("sciSolid") : t("sciLiquid"))}</text>
+    <text x="307" y="204" font-size="8.5" fill="#e8f1f7" text-anchor="middle" font-weight="600">${esc(t("sciCathode"))}</text>
+    <text x="307" y="215" font-size="7.5" fill="${L.color}" text-anchor="middle">${esc(L.cathode)}</text>
+    <text x="180" y="238" font-size="8" fill="#8aa2b8" text-anchor="middle">${esc(levelName(L))} · ${L.volt.toFixed(1)} V</text>
+  </svg>`;
+}
+
+function scienceHTML() {
+  const r = state === "dead" ? lastRun : null;
+  const L = r ? r.level : LEVELS[Math.min(maxLevel, LEVELS.length - 1)];
+  const [ra, rc] = REACTIONS[L.id];
+  return `
+    <h2>${esc(t("sciTitle"))}</h2>
+    ${diagramSVG(L)}
+    <div class="eq"><span class="muted">${esc(t("sciReactions"))}</span><span><b>${esc(t("sciAnodeR"))}:</b> ${esc(ra)}</span><span><b>${esc(t("sciCathodeR"))}:</b> ${esc(rc)}</span></div>
+    <h3>${esc(t("sciRun"))}</h3>
+    <p>${r ? esc(t("sciRunText", { phases: r.phases, cycles: r.cycles, pores: r.pores, level: levelName(L), volt: L.volt.toFixed(1).replace(".", lang === "es" ? "," : "."), cap: L.cap })) : esc(t("sciNoRun"))}</p>
+    <div class="fact"><h3>${esc(t("didYouKnow"))}</h3><p>${esc(FACTS[r ? currentFact : L.id][lang])}</p></div>
+    <h3>${esc(t("sciMapTitle"))}</h3>
+    <table class="map"><thead><tr><th>${esc(t("sciGame"))}</th><th>${esc(t("sciReal"))}</th></tr></thead><tbody>
+      ${t("map").map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join("")}
+    </tbody></table>
+    <p class="muted">${esc(t("sciNote"))}</p>
+    ${r ? `<button class="btn primary" data-a="retry">${esc(t("retry"))}</button><div class="row"><button class="btn small" data-a="over">${esc(t("back"))}</button><button class="btn small" data-a="menu">${esc(t("menu"))}</button></div>` : `<button class="btn" data-a="back">${esc(t("back"))}</button>`}`;
+}
+
+function pauseHTML() {
+  return `<h2 style="text-align:center">${esc(t("pause"))}</h2>
+    <button class="btn primary" data-a="resume">${esc(t("resume"))}</button>
+    <button class="btn" data-a="menu">${esc(t("menu"))}</button>`;
+}
+
+function render() {
+  updateChrome();
+  overlay.classList.remove("center", "late");
+  if (state === "play") { overlay.hidden = true; overlay.innerHTML = ""; return; }
+  overlay.hidden = false;
+  let html = "";
+  if (state === "paused") { html = pauseHTML(); overlay.classList.add("center"); }
+  else if (ui === "howto") html = howtoHTML();
+  else if (ui === "games") html = gamesHTML();
+  else if (ui === "science") html = scienceHTML();
+  else if (state === "dead") html = overHTML();
+  else { html = menuHTML(); overlay.classList.add("center"); }
+  overlay.innerHTML = html;
+  overlay.scrollTop = 0;
+}
+
+let toastTimer = 0;
+function toast(msg) {
+  toastEl.textContent = msg; toastEl.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastEl.hidden = true; }, 2600);
+}
+
+// ---------------- Compartir ----------------
+function shareURL() { return /^https?:$/.test(location.protocol) && /github\.io$/.test(location.hostname) ? location.origin + location.pathname : CONFIG.GAME_URL; }
+function shareText() {
+  const r = lastRun;
+  return r.mode === "daily"
+    ? t("shareDaily", { date: fmtDate(r.date), score: r.score })
+    : t("shareText", { score: r.score, level: levelName(r.level), cycles: r.cycles });
+}
+function shareCard() {
+  const r = lastRun, c = document.createElement("canvas");
+  c.width = 1200; c.height = 630;
+  const x = c.getContext("2d");
+  const g = x.createLinearGradient(0, 0, 0, 630); g.addColorStop(0, r.level.bg[0]); g.addColorStop(1, r.level.bg[1]);
+  x.fillStyle = g; x.fillRect(0, 0, 1200, 630);
+  x.fillStyle = "rgba(242,181,68,0.18)"; x.fillRect(760, 0, 90, 230); x.fillRect(760, 400, 90, 230);
+  x.fillStyle = "#f2b544"; x.fillRect(752, 222, 106, 12); x.fillRect(752, 396, 106, 12);
+  const ig = x.createRadialGradient(990, 315, 30, 990, 315, 160); ig.addColorStop(0, "rgba(255,77,166,0.6)"); ig.addColorStop(1, "rgba(255,77,166,0)");
+  x.fillStyle = ig; x.beginPath(); x.arc(990, 315, 160, 0, 7); x.fill();
+  x.fillStyle = "#ff4da6"; x.beginPath(); x.arc(990, 315, 80, 0, 7); x.fill();
+  x.fillStyle = "#fff"; x.font = `900 64px ${FONT_D}`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("Li⁺", 990, 318);
+  x.textAlign = "left"; x.textBaseline = "alphabetic";
+  x.fillStyle = "#e8f1f7"; x.font = `900 52px ${FONT_D}`; x.fillText("FLAPPY Li⁺", 70, 110);
+  x.fillStyle = "#8aa2b8"; x.font = `600 26px ${FONT_M}`; x.fillText(t("energy"), 72, 220);
+  x.fillStyle = "#e8f1f7"; x.font = `900 150px ${FONT_D}`; x.fillText(String(r.score), 64, 360);
+  x.fillStyle = r.level.color; x.font = `600 32px ${FONT_M}`;
+  x.fillText(`${levelName(r.level)} · ${r.cycles} ${t("cycles")} · ${r.pores} ${t("pores")}`, 72, 430);
+  if (r.mode === "daily") { x.fillStyle = "#f2b544"; x.fillText(`${t("daily")} ${fmtDate(r.date)}`, 72, 480); }
+  x.fillStyle = "#8aa2b8"; x.font = `500 26px ${FONT_M}`; x.fillText(shareURL().replace(/^https?:\/\//, ""), 72, 570);
+  return c;
+}
+async function doShare() {
+  const text = shareText(), url = shareURL();
+  if (navigator.share) {
+    try {
+      const data = { title: "Flappy Li⁺", text, url };
+      try {
+        const blob = await new Promise((res) => shareCard().toBlob(res, "image/png"));
+        const file = new File([blob], "flappy-li.png", { type: "image/png" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
+      } catch { /* sin imagen */ }
+      await navigator.share(data);
+      return;
+    } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(`${text} ${url}`); toast(t("copied")); }
+  catch { toast(`${text} ${url}`); }
+}
+function doImage() {
+  const a = document.createElement("a");
+  a.href = shareCard().toDataURL("image/png");
+  a.download = `flappy-li-${lastRun.score}.png`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// ---------------- Entrada ----------------
+function goMenu() { state = "menu"; ui = "menu"; reset(); render(); }
+function retry() { startGame(lastRun ? lastRun.mode : "normal"); }
+function togglePause() {
+  if (state === "play") { state = "paused"; render(); }
+  else if (state === "paused") { state = "play"; last = 0; render(); }
+}
+
+overlay.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-a]");
+  if (!b || b.disabled) return;
+  audio.ensure();
+  const a = b.dataset.a;
+  if (a === "play") startGame("normal");
+  else if (a === "daily") startGame("daily");
+  else if (a === "retry") retry();
+  else if (a === "menu") goMenu();
+  else if (a === "resume") togglePause();
+  else if (a === "howto" || a === "games" || a === "science") { ui = a; render(); }
+  else if (a === "over") { ui = "over"; render(); }
+  else if (a === "back") { ui = state === "dead" ? "over" : "menu"; render(); }
+  else if (a === "share") doShare();
+  else if (a === "image") doImage();
+});
+overlay.addEventListener("change", (e) => {
+  if (e.target.id === "teacher") { teacher = e.target.checked; store(KEYS.teacher, teacher); }
+});
+
+canvas.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  audio.ensure();
+  if (state === "play" && trans <= 0) flap();
+});
+btnPause.addEventListener("click", () => { togglePause(); btnPause.blur(); });
+btnMute.addEventListener("click", () => { audio.ensure(); audio.toggle(); updateChrome(); btnMute.blur(); });
+langSel.addEventListener("change", () => { lang = langSel.value; store(KEYS.lang, lang); render(); });
+
+window.addEventListener("keydown", (e) => {
+  const tag = e.target && e.target.tagName;
+  if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+  const isFlapKey = ["Space", "ArrowUp", "KeyW", "Enter"].includes(e.code);
+  if (tag === "BUTTON" && (e.code === "Space" || e.code === "Enter")) return;
+  if (isFlapKey) {
+    e.preventDefault();
+    if (e.repeat) return;
+    audio.ensure();
+    if (state === "play") { if (trans <= 0) flap(); }
+    else if (state === "paused") togglePause();
+    else if (state === "menu" && ui === "menu") startGame("normal");
+    else if (state === "dead" && time - deadAt > 0.6) retry();
+  } else if (e.code === "KeyP") togglePause();
+  else if (e.code === "Escape") {
+    if (state === "play" || state === "paused") togglePause();
+    else if (ui !== "menu" && ui !== "over") { ui = state === "dead" ? "over" : "menu"; render(); }
+  } else if (e.code === "KeyM") { audio.ensure(); audio.toggle(); updateChrome(); }
+});
+const autoPause = () => { if (state === "play") { state = "paused"; render(); } };
+window.addEventListener("blur", autoPause);
+document.addEventListener("visibilitychange", () => { if (document.hidden) autoPause(); last = 0; });
+if (document.fonts && document.fonts.load) {
+  Promise.all([document.fonts.load(`700 16px ${FONT_D}`), document.fonts.load(`600 16px ${FONT_M}`)]).catch(() => {});
+}
+
+render();
+requestAnimationFrame(loop);
+})();
 </script>
 
 </body>
